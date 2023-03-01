@@ -371,7 +371,6 @@ pub async fn connect_vmix_tcp(
     remote: SocketAddr,
     timeout: Duration,
 ) -> Result<(SyncSender<String>, Receiver<String>)> {
-    // TODO: Receiver<String> にTCPからのレスポンスをenum化して独自型定義した上で渡す
     let stream = TcpStream::connect_timeout(&remote, timeout).expect("Could not connect.");
     stream.set_read_timeout(None).unwrap();
 
@@ -387,6 +386,8 @@ pub async fn connect_vmix_tcp(
             // remove \r\n
             let buffer = buffer.lines().collect::<String>();
             // TODO: ここで切断されているか確認する
+            // TODO: Receiver<String> にTCPからのレスポンスをenum化して独自型定義した上で渡す
+            // TODO: "XML"の場合、後続のラインも解析する
             reader_sender.send(buffer.clone()).unwrap();
         }
     });
