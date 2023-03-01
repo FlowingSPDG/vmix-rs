@@ -1,0 +1,16 @@
+[package]
+name = "vmix"
+version = "0.1.0"
+edition = "2021"
+
+authors = ["Shugo Kawamura <shugo_k@flowing.tokyo>"]
+repository = "https://github.com/FlowingSPDG/vmix-rs"
+license = "MIT"
+
+[dependencies]
+anyhow = "1.0.69"
+async-readline = "0.1.0"
+serde = { version = "1.0.152", features = ["derive"] }
+tokio = { version = "1.25.0", features = ["rt", "net", "sync", "macros", "rt-multi-thread", "io-util", "io-std"] }
+
+[dev-dependencies]
