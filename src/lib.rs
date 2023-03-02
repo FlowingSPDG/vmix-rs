@@ -426,10 +426,10 @@ impl From<&str> for Status {
 
 #[derive(Debug)]
 pub struct Response {
-    command: Command,
-    status: Status,
-    body: Option<String>,
-    data: Option<String>,
+    pub command: Command,
+    pub status: Status,
+    pub body: Option<String>,
+    pub data: Option<String>,
 }
 
 impl Default for Response {
@@ -464,11 +464,10 @@ impl TryFrom<BufReader<&TcpStream>> for Response {
             }
         }
 
-        if commands.len() == 0 {
-            return Err(anyhow::anyhow!("Zero Command Length"));
+        if commands.len() < 2 {
+            return Err(anyhow::anyhow!("No enough Command Length"));
         }
-        // TODO: Handle error
-        let command: Command = commands[0].try_into().unwrap();
+        let command: Command = commands[0].try_into()?;
         let status: Status = commands[1].into();
         match command {
             // Example Response: TALLY OK 0121...\r\n
@@ -567,9 +566,12 @@ pub async fn connect_vmix_tcp(
         loop {
             let buf_reader = BufReader::new(&reader);
             // TODO: 切断されているか確認する
-            let response: Response = buf_reader.try_into().unwrap();
-
-            reader_sender.send(response).unwrap();
+            let read_result: Result<Response, _> = buf_reader.try_into();
+            if let Err(err) = read_result {
+                println!("Failed to parse incoming packet: {}", err);
+                continue;
+            }
+            reader_sender.send(read_result.unwrap()).unwrap();
         }
     });
 
