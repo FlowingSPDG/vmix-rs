@@ -1,4 +1,4 @@
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::sync::mpsc::{Receiver, SyncSender};
 use std::time::Duration;
@@ -403,7 +403,7 @@ impl TryFrom<&str> for Command {
 pub enum Status {
     OK,             // "OK"
     ER,             // "ER"
-    Length(u16),    //  Length of body
+    Length(u64),    //  Length of body
     Detail(String), // detail data
 }
 
@@ -413,7 +413,7 @@ impl From<&str> for Status {
             "OK" => Self::OK,
             "ER" => Self::ER,
             _ => {
-                if let Ok(length) = value.parse::<u16>() {
+                if let Ok(length) = value.parse::<u64>() {
                     return Self::Length(length);
                 };
                 return Self::Detail(value.to_string());
@@ -467,7 +467,6 @@ impl TryFrom<BufReader<&TcpStream>> for Response {
         if commands.len() == 0 {
             return Err(anyhow::anyhow!("Zero Command Length"));
         }
-
         // TODO: Handle error
         let command: Command = commands[0].try_into().unwrap();
         let status: Status = commands[1].into();
@@ -499,16 +498,21 @@ impl TryFrom<BufReader<&TcpStream>> for Response {
             <vmix><version>x.x.x.x</version></vmix>
             */
             Command::XML => {
-                println!("Start parsing XML");
                 if let Length(len) = &status {
+                    let mut took = stream.take(len.to_owned());
+                    let mut xml = String::new();
+                    took.read_to_string(&mut xml)?;
+
+                    // remove \r\n
+                    let xml = xml.lines().collect::<String>();
                     return Ok(Self {
                         command,
                         status,
                         body: None,
-                        data: None, // TODO
+                        data: Some(xml),
                     });
                 }
-                todo!()
+                Err(anyhow::anyhow!("Failed to read XML"))
             }
             // Example Response: XMLTEXT OK This is the title of the first input\r\n
             Command::XMLTEXT => Ok(Self {
