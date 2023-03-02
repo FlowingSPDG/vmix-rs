@@ -365,30 +365,207 @@ pub enum State {
 }
 
 // TCP API
+use crate::Status::Length;
 use anyhow::Result;
+
+#[derive(Debug)]
+pub enum Command {
+    TALLY,
+    FUNCTION,
+    ACTS,
+    XML,
+    XMLTEXT,
+    SUBSCRIBE,
+    UNSUBSCRIBE,
+    QUIT,
+    VERSION,
+}
+impl TryFrom<&str> for Command {
+    type Error = anyhow::Error;
+
+    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+        match value {
+            "TALLY" => Ok(Self::TALLY),
+            "FUNCTION" => Ok(Self::FUNCTION),
+            "ACTS" => Ok(Self::ACTS),
+            "XML" => Ok(Self::XML),
+            "XMLTEXT" => Ok(Self::XMLTEXT),
+            "SUBSCRIBE" => Ok(Self::SUBSCRIBE),
+            "UNSUBSCRIBE" => Ok(Self::UNSUBSCRIBE),
+            "QUIT" => Ok(Self::QUIT),
+            "VERSION" => Ok(Self::VERSION),
+            _ => Err(anyhow::anyhow!("No matching command found")),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum Status {
+    OK,             // "OK"
+    ER,             // "ER"
+    Length(u16),    //  Length of body
+    Detail(String), // detail data
+}
+
+impl From<&str> for Status {
+    fn from(value: &str) -> Self {
+        match value {
+            "OK" => Self::OK,
+            "ER" => Self::ER,
+            _ => {
+                if let Ok(length) = value.parse::<u16>() {
+                    return Self::Length(length);
+                };
+                return Self::Detail(value.to_string());
+            }
+        }
+    }
+}
+
+// TODO: add "Request" struct
+
+#[derive(Debug)]
+pub struct Response {
+    command: Command,
+    status: Status,
+    body: Option<String>,
+    data: Option<String>,
+}
+
+impl Default for Response {
+    fn default() -> Self {
+        Self {
+            command: Command::TALLY,
+            status: Status::OK,
+            body: None,
+            data: None,
+        }
+    }
+}
+
+impl TryFrom<BufReader<&TcpStream>> for Response {
+    type Error = anyhow::Error;
+
+    fn try_from(mut stream: BufReader<&TcpStream>) -> std::result::Result<Self, Self::Error> {
+        // read stream
+        let mut value = String::new();
+        stream.read_line(&mut value)?;
+
+        // remove \r\n
+        let value = value.lines().collect::<String>();
+
+        let mut commands: Vec<&str> = vec![];
+        let mut iter = value.split_whitespace();
+        loop {
+            if let Some(command) = iter.next() {
+                commands.push(command);
+            } else {
+                break;
+            }
+        }
+
+        if commands.len() == 0 {
+            return Err(anyhow::anyhow!("Zero Command Length"));
+        }
+
+        // TODO: Handle error
+        let command: Command = commands[0].try_into().unwrap();
+        let status: Status = commands[1].into();
+        match command {
+            // Example Response: TALLY OK 0121...\r\n
+            Command::TALLY => Ok(Self {
+                command,
+                status,
+                body: Some(commands[2].to_string()),
+                data: None,
+            }),
+            // Example Response: FUNCTION OK PreviewInput\r\n
+            // Example Response: FUNCTION ER Error message\r\n
+            Command::FUNCTION => Ok(Self {
+                command,
+                status,
+                body: Some(commands[2].to_string()),
+                data: None,
+            }),
+            // Example Response: ACTS OK Input 1 1\r\n
+            Command::ACTS => Ok(Self {
+                command,
+                status,
+                body: Some(commands[2].to_string()),
+                data: None,
+            }),
+            /*
+            Example Response: XML 37\r\n
+            <vmix><version>x.x.x.x</version></vmix>
+            */
+            Command::XML => {
+                println!("Start parsing XML");
+                if let Length(len) = &status {
+                    return Ok(Self {
+                        command,
+                        status,
+                        body: None,
+                        data: None, // TODO
+                    });
+                }
+                todo!()
+            }
+            // Example Response: XMLTEXT OK This is the title of the first input\r\n
+            Command::XMLTEXT => Ok(Self {
+                command,
+                status,
+                body: Some(commands[2].to_string()),
+                data: None,
+            }),
+            // Example Response: SUBSCRIBE OK TALLY\r\n
+            Command::SUBSCRIBE => Ok(Self {
+                command,
+                status,
+                body: Some(commands[2].to_string()),
+                data: None,
+            }),
+            // Example Response: UNSUBSCRIBE OK TALLY\r\n
+            Command::UNSUBSCRIBE => Ok(Self {
+                command,
+                status,
+                body: Some(commands[2].to_string()),
+                data: None,
+            }),
+            // No response
+            Command::QUIT => {
+                todo!()
+            }
+            Command::VERSION => {
+                let status: Status = commands[1].into();
+                Ok(Self {
+                    command,
+                    status,
+                    body: Some(commands[2].to_string()),
+                    data: None,
+                })
+            }
+        }
+    }
+}
 
 pub async fn connect_vmix_tcp(
     remote: SocketAddr,
     timeout: Duration,
-) -> Result<(SyncSender<String>, Receiver<String>)> {
+) -> Result<(SyncSender<String>, Receiver<Response>)> {
     let stream = TcpStream::connect_timeout(&remote, timeout).expect("Could not connect.");
     stream.set_read_timeout(None).unwrap();
 
     // reader thread
-    let (reader_sender, reader_receiver): (SyncSender<String>, Receiver<String>) =
+    let (reader_sender, reader_receiver): (SyncSender<Response>, Receiver<Response>) =
         std::sync::mpsc::sync_channel(1);
     let reader = stream.try_clone().unwrap();
     tokio::spawn(async move {
         loop {
-            let mut buf_reader = BufReader::new(&reader);
-            let mut buffer = String::new();
-            buf_reader.read_line(&mut buffer).unwrap();
-            // remove \r\n
-            let buffer = buffer.lines().collect::<String>();
-            // TODO: ここで切断されているか確認する
-            // TODO: Receiver<String> にTCPからのレスポンスをenum化して独自型定義した上で渡す
-            // TODO: "XML"の場合、後続のラインも解析する
-            reader_sender.send(buffer.clone()).unwrap();
+            let buf_reader = BufReader::new(&reader);
+            // TODO: 切断されているか確認する
+            let response: Response = buf_reader.try_into().unwrap();
+
+            reader_sender.send(response).unwrap();
         }
     });
 

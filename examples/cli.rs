@@ -14,7 +14,7 @@ async fn main() -> Result<()> {
     tokio::spawn(async move {
         loop {
             if let Ok(received) = receiver.recv() {
-                println!("received: {}", received);
+                println!("received: {:?}", received);
             }
         }
     });
