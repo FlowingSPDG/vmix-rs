@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{SocketAddr, TcpStream};
 use std::sync::mpsc::{Receiver, SyncSender};
@@ -161,9 +162,11 @@ pub struct Input {
     #[serde(rename = "solo")]
     pub solo: Option<Boolean>,
 
+    // TODO: "M,A"のようなカンマ区切りのパターンも網羅する
+    /*
     #[serde(rename = "audiobusses")]
     pub audiobusses: Option<Audiobusses>,
-
+     */
     #[serde(rename = "meterF1")]
     pub meter_f1: Option<String>,
 
@@ -353,6 +356,12 @@ pub enum Boolean {
 pub enum Audiobusses {
     #[serde(rename = "M")]
     M,
+
+    #[serde(rename = "A")]
+    A,
+
+    #[serde(rename = "B")]
+    B,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -366,55 +375,28 @@ pub enum State {
 
 // TCP API
 use crate::Status::Length;
+use crate::TallyData::{OFF, PREVIEW, PROGRAM};
 use anyhow::Result;
 
-#[derive(Debug)]
-pub enum Command {
-    TALLY,
-    FUNCTION,
-    ACTS,
-    XML,
-    XMLTEXT,
-    SUBSCRIBE,
-    UNSUBSCRIBE,
-    QUIT,
-    VERSION,
-}
-impl TryFrom<&str> for Command {
-    type Error = anyhow::Error;
-
-    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
-        match value {
-            "TALLY" => Ok(Self::TALLY),
-            "FUNCTION" => Ok(Self::FUNCTION),
-            "ACTS" => Ok(Self::ACTS),
-            "XML" => Ok(Self::XML),
-            "XMLTEXT" => Ok(Self::XMLTEXT),
-            "SUBSCRIBE" => Ok(Self::SUBSCRIBE),
-            "UNSUBSCRIBE" => Ok(Self::UNSUBSCRIBE),
-            "QUIT" => Ok(Self::QUIT),
-            "VERSION" => Ok(Self::VERSION),
-            _ => Err(anyhow::anyhow!("No matching command found")),
-        }
-    }
-}
+pub type InputNumber = u16; // 0~1000
 
 #[derive(Debug)]
 pub enum Status {
     OK,             // "OK"
     ER,             // "ER"
-    Length(u64),    //  Length of body
+    Length(u64),    // Length of body
     Detail(String), // detail data
 }
 
-impl From<&str> for Status {
-    fn from(value: &str) -> Self {
+impl From<String> for Status {
+    fn from(value: String) -> Self {
+        let value = value.as_str();
         match value {
             "OK" => Self::OK,
             "ER" => Self::ER,
             _ => {
                 if let Ok(length) = value.parse::<u64>() {
-                    return Self::Length(length);
+                    return Length(length);
                 };
                 return Self::Detail(value.to_string());
             }
@@ -422,81 +404,274 @@ impl From<&str> for Status {
     }
 }
 
-// TODO: add "Request" struct
-
 #[derive(Debug)]
-pub struct Response {
-    pub command: Command,
+pub struct TallyResponse {
     pub status: Status,
-    pub body: Option<String>,
-    pub data: Option<String>,
+    pub body: HashMap<InputNumber, TallyData>,
 }
-
-impl Default for Response {
-    fn default() -> Self {
-        Self {
-            command: Command::TALLY,
-            status: Status::OK,
-            body: None,
-            data: None,
+#[derive(Debug)]
+pub enum TallyData {
+    OFF,
+    PROGRAM,
+    PREVIEW,
+}
+impl From<char> for TallyData {
+    fn from(value: char) -> Self {
+        match value {
+            '0' => OFF,
+            '1' => PROGRAM,
+            '2' => PREVIEW,
+            _ => OFF, // NO MATCHING PATTERN
         }
     }
 }
 
-impl TryFrom<BufReader<&TcpStream>> for Response {
+#[derive(Debug)]
+pub struct FunctionResponse {
+    pub status: Status,
+    pub body: Option<String>,
+}
+
+pub struct XMLResponse {
+    pub status: Status,
+    pub body: Vmix,
+}
+#[derive(Debug)]
+pub struct XMLTextResponse {
+    pub status: Status,
+    pub body: Option<String>,
+}
+#[derive(Debug)]
+pub struct SubscribeResponse {
+    pub status: Status,
+    pub body: Option<String>,
+}
+#[derive(Debug)]
+pub struct UnsubscribeResponse {
+    pub status: Status,
+    pub body: Option<String>,
+}
+#[derive(Debug)]
+pub struct VersionResponse {
+    pub status: Status,
+    pub version: Option<String>, // TODO: parse semver
+}
+
+#[derive(Debug)]
+pub struct ActivatorsResponse {
+    pub status: Status,
+    pub body: ActivatorsData,
+}
+
+#[derive(Debug)]
+pub enum ActivatorsData {
+    Input(InputNumber),
+    InputPreview(InputNumber, bool),
+    InputPlaying(InputNumber, bool),
+    InputVolume(InputNumber, f64),
+    InputHeadphones(InputNumber, f64),
+    MasterVolume(f64),
+    MasterHeadphones(f64),
+    BusAVolume(f64),
+    BusBVolume(f64),
+    InputAudio(InputNumber, bool),
+    InputSolo(InputNumber, bool),
+    InputBusAAudio(InputNumber, bool),
+    InputBusBAudio(InputNumber, bool),
+    InputMasterAudio(InputNumber, bool),
+    MasterAudio(bool),
+    BusAAudio(bool),
+    BusBAudio(bool),
+    FadeToBlack(bool),
+    Recording(bool),
+    Streaming(bool),
+    External(bool),
+    Fullscreen(bool),
+}
+
+impl TryFrom<&[String]> for ActivatorsData {
+    type Error = anyhow::Error;
+    fn try_from(value: &[String]) -> std::result::Result<Self, Self::Error> {
+        match value[0].as_str() {
+            "Input" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                Ok(ActivatorsData::Input(input_num))
+            }
+            "InputPreview" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputPreview(input_num, is_active))
+            }
+            "InputPlaying" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputPlaying(input_num, is_active))
+            }
+            "InputVolume" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let volume = value[2].parse::<f64>().unwrap();
+                Ok(ActivatorsData::InputVolume(input_num, volume))
+            }
+            "InputHeadphones" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let volume = value[2].parse::<f64>().unwrap();
+                Ok(ActivatorsData::InputHeadphones(input_num, volume))
+            }
+            "MasterVolume" => {
+                let volume = value[1].parse::<f64>().unwrap();
+                Ok(ActivatorsData::MasterVolume(volume))
+            }
+            "MasterHeadphones" => {
+                let volume = value[1].parse::<f64>().unwrap();
+                Ok(ActivatorsData::MasterHeadphones(volume))
+            }
+            "BusAVolume" => {
+                let volume = value[1].parse::<f64>().unwrap();
+                Ok(ActivatorsData::BusAVolume(volume))
+            }
+            "BusBVolume" => {
+                let volume = value[1].parse::<f64>().unwrap();
+                Ok(ActivatorsData::BusBVolume(volume))
+            }
+            "InputAudio" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputAudio(input_num, is_active))
+            }
+            "InputSolo" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputSolo(input_num, is_active))
+            }
+            "InputBusAAudio" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputBusAAudio(input_num, is_active))
+            }
+            "InputBusBAudio" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputBusBAudio(input_num, is_active))
+            }
+            "InputMasterAudio" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputMasterAudio(input_num, is_active))
+            }
+            "MasterAudio" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::MasterAudio(is_active))
+            }
+            "BusAAudio" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusAAudio(is_active))
+            }
+            "BusBAudio" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusBAudio(is_active))
+            }
+            "FadeToBlack" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::FadeToBlack(is_active))
+            }
+            "Recording" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::Recording(is_active))
+            }
+            "Streaming" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::Streaming(is_active))
+            }
+            "External" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::External(is_active))
+            }
+            "Fullscreen" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::Fullscreen(is_active))
+            }
+            _ => Err(anyhow::anyhow!("Unknown Activator")),
+        }
+    }
+}
+
+pub enum Command {
+    TALLY(TallyResponse),
+    FUNCTION(FunctionResponse),
+    ACTS(ActivatorsResponse),
+    XML(XMLResponse),
+    XMLTEXT(XMLTextResponse),
+    SUBSCRIBE(SubscribeResponse),
+    UNSUBSCRIBE(UnsubscribeResponse),
+    QUIT,
+    VERSION(VersionResponse),
+}
+
+// TODO: add "Request" struct
+
+impl TryFrom<&TcpStream> for Command {
     type Error = anyhow::Error;
 
-    fn try_from(mut stream: BufReader<&TcpStream>) -> std::result::Result<Self, Self::Error> {
+    fn try_from(stream: &TcpStream) -> std::result::Result<Self, Self::Error> {
+        let mut stream = BufReader::new(stream);
+
         // read stream
         let mut value = String::new();
         stream.read_line(&mut value)?;
 
+        // println!("DEBUG RECEIVED LINE: {:?}", value);
+
         // remove \r\n
         let value = value.lines().collect::<String>();
 
-        let mut commands: Vec<&str> = vec![];
+        let mut commands: Vec<String> = vec![];
         let mut iter = value.split_whitespace();
         loop {
             if let Some(command) = iter.next() {
-                commands.push(command);
+                commands.push(command.to_string());
             } else {
                 break;
             }
         }
 
-        if commands.len() < 2 {
-            return Err(anyhow::anyhow!("No enough Command Length"));
-        }
-        let command: Command = commands[0].try_into()?;
-        let status: Status = commands[1].into();
+        // first element
+        let binding: &String = commands.get(0).unwrap();
+        let command = binding.as_str().try_into()?;
+        let status: Status = commands.get(1).unwrap().to_owned().into();
+        let body: Option<String> = commands.get(2).cloned();
         match command {
             // Example Response: TALLY OK 0121...\r\n
-            Command::TALLY => Ok(Self {
-                command,
-                status,
-                body: Some(commands[2].to_string()),
-                data: None,
-            }),
+            "TALLY" => {
+                let mut tally_map = HashMap::new();
+                // check if status is ok
+                let chars: Vec<char> = body.unwrap().chars().collect::<Vec<char>>();
+                for (i, char) in chars.iter().enumerate() {
+                    let tally: TallyData = (*char).into();
+                    let mut index = i as InputNumber;
+                    index += 1;
+                    tally_map.insert(index, tally);
+                }
+                Ok(Self::TALLY(TallyResponse {
+                    status,
+                    body: tally_map,
+                }))
+            }
             // Example Response: FUNCTION OK PreviewInput\r\n
             // Example Response: FUNCTION ER Error message\r\n
-            Command::FUNCTION => Ok(Self {
-                command,
-                status,
-                body: Some(commands[2].to_string()),
-                data: None,
-            }),
+            "FUNCTION" => Ok(Self::FUNCTION(FunctionResponse { status, body })),
             // Example Response: ACTS OK Input 1 1\r\n
-            Command::ACTS => Ok(Self {
-                command,
-                status,
-                body: Some(commands[2].to_string()),
-                data: None,
-            }),
+            "ACTS" => {
+                // 2以降のベクターを使用する
+                let len = commands.len();
+                let raw = &commands.clone()[2..len];
+                let body = ActivatorsData::try_from(raw).unwrap();
+                Ok(Self::ACTS(ActivatorsResponse { status, body }))
+            }
             /*
             Example Response: XML 37\r\n
             <vmix><version>x.x.x.x</version></vmix>
             */
-            Command::XML => {
+            "XML" => {
                 if let Length(len) = &status {
                     let mut took = stream.take(len.to_owned());
                     let mut xml = String::new();
@@ -504,49 +679,21 @@ impl TryFrom<BufReader<&TcpStream>> for Response {
 
                     // remove \r\n
                     let xml = xml.lines().collect::<String>();
-                    return Ok(Self {
-                        command,
-                        status,
-                        body: None,
-                        data: Some(xml),
-                    });
+
+                    let vmix: Vmix = serde_xml_rs::from_str(xml.as_str()).unwrap();
+                    return Ok(Self::XML(XMLResponse { status, body: vmix }));
                 }
                 Err(anyhow::anyhow!("Failed to read XML"))
             }
-            // Example Response: XMLTEXT OK This is the title of the first input\r\n
-            Command::XMLTEXT => Ok(Self {
-                command,
+            "XMLTEXT" => Ok(Self::XMLTEXT(XMLTextResponse { status, body })),
+            "SUBSCRIBE" => Ok(Self::SUBSCRIBE(SubscribeResponse { status, body })),
+            "UNSUBSCRIBE" => Ok(Self::UNSUBSCRIBE(UnsubscribeResponse { status, body })),
+            "QUIT" => Ok(Self::QUIT), // No body
+            "VERSION" => Ok(Self::VERSION(VersionResponse {
                 status,
-                body: Some(commands[2].to_string()),
-                data: None,
-            }),
-            // Example Response: SUBSCRIBE OK TALLY\r\n
-            Command::SUBSCRIBE => Ok(Self {
-                command,
-                status,
-                body: Some(commands[2].to_string()),
-                data: None,
-            }),
-            // Example Response: UNSUBSCRIBE OK TALLY\r\n
-            Command::UNSUBSCRIBE => Ok(Self {
-                command,
-                status,
-                body: Some(commands[2].to_string()),
-                data: None,
-            }),
-            // No response
-            Command::QUIT => {
-                todo!()
-            }
-            Command::VERSION => {
-                let status: Status = commands[1].into();
-                Ok(Self {
-                    command,
-                    status,
-                    body: Some(commands[2].to_string()),
-                    data: None,
-                })
-            }
+                version: body,
+            })),
+            _ => Err(anyhow::anyhow!("No matching command found")),
         }
     }
 }
@@ -554,19 +701,22 @@ impl TryFrom<BufReader<&TcpStream>> for Response {
 pub async fn connect_vmix_tcp(
     remote: SocketAddr,
     timeout: Duration,
-) -> Result<(SyncSender<String>, Receiver<Response>)> {
+) -> Result<(SyncSender<String>, Receiver<Command>)> {
     let stream = TcpStream::connect_timeout(&remote, timeout).expect("Could not connect.");
     stream.set_read_timeout(None).unwrap();
 
+    // writer stream
+    let mut writer = stream.try_clone().unwrap();
+
     // reader thread
-    let (reader_sender, reader_receiver): (SyncSender<Response>, Receiver<Response>) =
+    let (reader_sender, reader_receiver): (SyncSender<Command>, Receiver<Command>) =
         std::sync::mpsc::sync_channel(1);
-    let reader = stream.try_clone().unwrap();
     tokio::spawn(async move {
+        // reader stream
+        let reader = &stream.try_clone().unwrap();
         loop {
-            let buf_reader = BufReader::new(&reader);
             // TODO: 切断されているか確認する
-            let read_result: Result<Response, _> = buf_reader.try_into();
+            let read_result: Result<Command, _> = reader.try_into();
             if let Err(err) = read_result {
                 println!("Failed to parse incoming packet: {}", err);
                 continue;
@@ -578,7 +728,6 @@ pub async fn connect_vmix_tcp(
     let (writer_sender, writer_receiver): (SyncSender<String>, Receiver<String>) =
         std::sync::mpsc::sync_channel(1);
 
-    let mut writer = stream.try_clone().unwrap();
     tokio::spawn(async move {
         loop {
             let received = writer_receiver.recv();

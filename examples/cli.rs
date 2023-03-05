@@ -3,7 +3,7 @@ use std::io::stdin;
 use std::net::SocketAddr;
 use std::time::Duration;
 use tokio::sync::mpsc::unbounded_channel;
-use vmix::connect_vmix_tcp;
+use vmix::{connect_vmix_tcp, Command};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -14,7 +14,35 @@ async fn main() -> Result<()> {
     tokio::spawn(async move {
         loop {
             if let Ok(received) = receiver.recv() {
-                println!("received: {:?}", received);
+                match received {
+                    Command::TALLY(tally) => {
+                        println!("recv tally {:?}", tally)
+                    }
+                    Command::FUNCTION(func) => {
+                        println!("recv func {:?}", func)
+                    }
+                    Command::ACTS(acts) => {
+                        println!("recv acts {:?}", acts)
+                    }
+                    Command::XML(xml) => {
+                        println!("recv xml {:?}", xml.body.version)
+                    }
+                    Command::XMLTEXT(text) => {
+                        println!("recv text {:?}", text)
+                    }
+                    Command::SUBSCRIBE(subbed) => {
+                        println!("recv subbed {:?}", subbed)
+                    }
+                    Command::UNSUBSCRIBE(unsubbed) => {
+                        println!("recv unsubbed {:?}", unsubbed)
+                    }
+                    Command::QUIT => {
+                        println!("recv quit")
+                    }
+                    Command::VERSION(version) => {
+                        println!("recv version {:?}", version)
+                    }
+                }
             }
         }
     });
