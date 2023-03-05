@@ -380,10 +380,11 @@ pub enum Command {
     QUIT,
     VERSION,
 }
-impl TryFrom<&str> for Command {
+impl TryFrom<String> for Command {
     type Error = anyhow::Error;
 
-    fn try_from(value: &str) -> std::result::Result<Self, Self::Error> {
+    fn try_from(value: String) -> std::result::Result<Self, Self::Error> {
+        let value = value.as_str();
         match value {
             "TALLY" => Ok(Self::TALLY),
             "FUNCTION" => Ok(Self::FUNCTION),
@@ -407,14 +408,15 @@ pub enum Status {
     Detail(String), // detail data
 }
 
-impl From<&str> for Status {
-    fn from(value: &str) -> Self {
+impl From<String> for Status {
+    fn from(value: String) -> Self {
+        let value = value.as_str();
         match value {
             "OK" => Self::OK,
             "ER" => Self::ER,
             _ => {
                 if let Ok(length) = value.parse::<u64>() {
-                    return Self::Length(length);
+                    return Length(length);
                 };
                 return Self::Detail(value.to_string());
             }
@@ -429,7 +431,42 @@ pub struct Response {
     pub command: Command,
     pub status: Status,
     pub body: Option<String>,
-    pub data: Option<String>,
+    pub data: Option<ResponseData>,
+}
+
+#[derive(Debug)]
+pub enum ResponseData {
+    RawResponse(String),
+    ActivatorsResponse
+}
+
+pub type input_number = u16; // 0~1000
+
+#[derive(Debug)]
+
+pub enum ActivatorsResponse {
+    Input(input_number),
+    InputPreview(input_number,bool),
+    InputPlaying(input_number,bool),
+    InputVolume(input_number,f64),
+    InputHeadphones(input_number,f64),
+    MasterVolume(f64),
+    MasterHeadphones(f64),
+    BusAVolume(f64),
+    BusBVolume(f64),
+    InputAudio(input_number, bool),
+    InputSolo(input_number, bool),
+    InputBusAAudio(input_number, bool),
+    InputBusBAudio(input_number, bool),
+    InputMasterAudio(input_number, bool),
+    MasterAudio(bool),
+    BusAAudio(bool),
+    BusBAudio(bool),
+    FadeToBlack(bool),
+    Recording(bool),
+    Streaming(bool),
+    External(bool),
+    Fullscreen(bool)
 }
 
 impl Default for Response {
@@ -450,31 +487,30 @@ impl TryFrom<BufReader<&TcpStream>> for Response {
         // read stream
         let mut value = String::new();
         stream.read_line(&mut value)?;
+        println!("DEBUG READLINE: {:?}", &value);
 
         // remove \r\n
         let value = value.lines().collect::<String>();
 
-        let mut commands: Vec<&str> = vec![];
+        let mut commands: Vec<String> = vec![];
         let mut iter = value.split_whitespace();
         loop {
             if let Some(command) = iter.next() {
-                commands.push(command);
+                commands.push(command.to_string());
             } else {
                 break;
             }
         }
 
-        if commands.len() < 2 {
-            return Err(anyhow::anyhow!("No enough Command Length"));
-        }
-        let command: Command = commands[0].try_into()?;
-        let status: Status = commands[1].into();
+        let command: Command = commands.get(0).unwrap().to_owned().try_into()?;
+        let status: Status = commands.get(1).unwrap().to_owned().into();
+        let body:Option<String> = commands.get(2).cloned();
         match command {
             // Example Response: TALLY OK 0121...\r\n
             Command::TALLY => Ok(Self {
                 command,
                 status,
-                body: Some(commands[2].to_string()),
+                body,
                 data: None,
             }),
             // Example Response: FUNCTION OK PreviewInput\r\n
@@ -482,14 +518,15 @@ impl TryFrom<BufReader<&TcpStream>> for Response {
             Command::FUNCTION => Ok(Self {
                 command,
                 status,
-                body: Some(commands[2].to_string()),
+                body,
                 data: None,
             }),
             // Example Response: ACTS OK Input 1 1\r\n
             Command::ACTS => Ok(Self {
+                // TODO
                 command,
                 status,
-                body: Some(commands[2].to_string()),
+                body,
                 data: None,
             }),
             /*
@@ -507,8 +544,8 @@ impl TryFrom<BufReader<&TcpStream>> for Response {
                     return Ok(Self {
                         command,
                         status,
-                        body: None,
-                        data: Some(xml),
+                        body,
+                        data: Some(ResponseData::RawResponse(xml)),
                     });
                 }
                 Err(anyhow::anyhow!("Failed to read XML"))
@@ -517,35 +554,35 @@ impl TryFrom<BufReader<&TcpStream>> for Response {
             Command::XMLTEXT => Ok(Self {
                 command,
                 status,
-                body: Some(commands[2].to_string()),
+                body,
                 data: None,
             }),
             // Example Response: SUBSCRIBE OK TALLY\r\n
             Command::SUBSCRIBE => Ok(Self {
                 command,
                 status,
-                body: Some(commands[2].to_string()),
+                body,
                 data: None,
             }),
             // Example Response: UNSUBSCRIBE OK TALLY\r\n
             Command::UNSUBSCRIBE => Ok(Self {
                 command,
                 status,
-                body: Some(commands[2].to_string()),
+                body,
                 data: None,
             }),
-            // No response
-            Command::QUIT => {
-                todo!()
-            }
+            // Undocumented VERSION Response
             Command::VERSION => {
-                let status: Status = commands[1].into();
                 Ok(Self {
                     command,
                     status,
-                    body: Some(commands[2].to_string()),
+                    body,
                     data: None,
                 })
+            },
+            // No response
+            Command::QUIT => {
+                todo!()
             }
         }
     }
