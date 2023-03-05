@@ -617,7 +617,11 @@ impl TryFrom<&TcpStream> for Command {
 
         // read stream
         let mut value = String::new();
-        stream.read_line(&mut value)?;
+
+        // no data found
+        if stream.read_line(&mut value)? == 0 {
+            return Err(anyhow::anyhow!(std::io::ErrorKind::ConnectionAborted));
+        };
 
         // println!("DEBUG RECEIVED LINE: {:?}", value);
 
@@ -715,9 +719,13 @@ pub async fn connect_vmix_tcp(
         // reader stream
         let reader = &stream.try_clone().unwrap();
         loop {
-            // TODO: 切断されているか確認する
             let read_result: Result<Command, _> = reader.try_into();
             if let Err(err) = read_result {
+                if err.is::<std::io::ErrorKind>() {
+                    // IO ERROR (e.g. timeout)
+                    println!("Connection is closed");
+                    break;
+                }
                 println!("Failed to parse incoming packet: {}", err);
                 continue;
             }
