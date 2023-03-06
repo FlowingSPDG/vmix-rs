@@ -1,7 +1,5 @@
 use anyhow::Result;
-use std::io::stdin;
-use std::net::SocketAddr;
-use std::time::Duration;
+use std::{io::stdin, net::SocketAddr, time::Duration};
 use tokio::sync::mpsc::unbounded_channel;
 use vmix::{connect_vmix_tcp, Command};
 
