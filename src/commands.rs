@@ -2,9 +2,7 @@ use crate::acts::ActivatorsData;
 use crate::commands::Status::Length;
 use crate::models::Vmix;
 use std::{
-    collections::HashMap,
-    io::{BufRead, BufReader, Read},
-    net::TcpStream,
+    collections::HashMap, fmt::{self, Display}, io::{BufRead, BufReader, Read}, net::TcpStream
 };
 
 pub type InputNumber = u16; // 0~1000
@@ -92,7 +90,7 @@ pub struct ActivatorsResponse {
     pub body: ActivatorsData,
 }
 
-pub enum Command {
+pub enum RecvCommand {
     TALLY(TallyResponse),
     FUNCTION(FunctionResponse),
     ACTS(ActivatorsResponse),
@@ -104,7 +102,52 @@ pub enum Command {
     VERSION(VersionResponse),
 }
 
-impl TryFrom<&TcpStream> for Command {
+pub enum SendCommand {
+    TALLY,
+    FUNCTION(String, Option<String>),
+    ACTS(String, usize),
+    XML,
+    XMLTEXT(String),
+    SUBSCRIBE(SUBSCRIBECommand),
+    UNSUBSCRIBE(SUBSCRIBECommand),
+    QUIT,
+    VERSION,
+
+    RAW(String),
+}
+
+impl Into<Vec<u8>> for SendCommand {
+    fn into(self) -> Vec<u8> {
+        match self {
+            Self::TALLY => "TALLY".as_bytes().to_vec(),
+            Self::FUNCTION(func, query) => format!("FUNCTION {} {}", func, query.unwrap_or("".to_string())).into_bytes(),
+            Self::ACTS(command, input) => format!("ACTS {} {}", command, input).into_bytes(),
+            Self::XML => "XML".as_bytes().to_vec(),
+            Self::XMLTEXT(path) => format!("XMLTEXT {}", path).into_bytes(),
+            Self::SUBSCRIBE(command) => format!("SUBSCRIBE {}", command).into_bytes(),
+            Self::UNSUBSCRIBE(command) => format!("UNSUBSCRIBE {}", command).into_bytes(),
+            Self::QUIT => "QUIT".as_bytes().to_vec(),
+            Self::VERSION => "VERSION".as_bytes().to_vec(),
+            Self::RAW(raw) => raw.into_bytes(),
+        }
+    }
+}
+
+pub enum SUBSCRIBECommand {
+    TALLY,
+    ACTS
+}
+
+impl Display for SUBSCRIBECommand {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::TALLY => write!(f, "TALLY"),
+            Self::ACTS => write!(f, "ACTS"),
+        }
+    }
+}
+
+impl TryFrom<&TcpStream> for RecvCommand {
     type Error = anyhow::Error;
 
     fn try_from(stream: &TcpStream) -> Result<Self, Self::Error> {
@@ -164,7 +207,7 @@ impl TryFrom<&TcpStream> for Command {
                 // 2以降のベクターを使用する
                 let len = commands.len();
                 let raw = &commands.clone()[2..len];
-                let body = ActivatorsData::try_from(raw).unwrap();
+                let body = ActivatorsData::try_from(raw)?;
                 Ok(Self::ACTS(ActivatorsResponse { status, body }))
             }
             /*

@@ -41,14 +41,36 @@ pub enum ActivatorsData {
     MasterHeadphones(f32),
     BusAVolume(f32),
     BusBVolume(f32),
+    BusCVolume(f32),
+    BusDVolume(f32),
+    BusEVolume(f32),
+    BusFVolume(f32),
+    BusGVolume(f32),
     InputAudio(InputNumber, bool),
     InputSolo(InputNumber, bool),
     InputBusAAudio(InputNumber, bool),
     InputBusBAudio(InputNumber, bool),
+    InputBusCAudio(InputNumber, bool),
+    InputBusDAudio(InputNumber, bool),
+    InputBusEAudio(InputNumber, bool),
+    InputBusFAudio(InputNumber, bool),
+    InputBusGAudio(InputNumber, bool),
     InputMasterAudio(InputNumber, bool),
     MasterAudio(bool),
     BusAAudio(bool),
     BusBAudio(bool),
+    BusCAudio(bool),
+    BusDAudio(bool),
+    BusEAudio(bool),
+    BusFAudio(bool),
+    BusGAudio(bool),
+    BusASolo(bool),
+    BusBSolo(bool),
+    BusCSolo(bool),
+    BusDSolo(bool),
+    BusESolo(bool),
+    BusFSolo(bool),
+    BusGSolo(bool),
     FadeToBlack(bool),
     Recording(bool),
     Streaming(bool),
@@ -65,6 +87,7 @@ impl TryFrom<&[String]> for ActivatorsData {
     type Error = anyhow::Error;
     fn try_from(value: &[String]) -> Result<Self, Self::Error> {
         match value[0].as_str() {
+            // TODO: 共通処理を切り出す
             "Input" => {
                 let input_num = value[1].parse::<InputNumber>().unwrap();
                 let is_active = value[2].as_str() == "1";
@@ -256,6 +279,26 @@ impl TryFrom<&[String]> for ActivatorsData {
                 let volume = value[1].parse::<f32>().unwrap();
                 Ok(ActivatorsData::BusBVolume(volume))
             }
+            "BusCVolume" => {
+                let volume = value[1].parse::<f32>().unwrap();
+                Ok(ActivatorsData::BusCVolume(volume))
+            }
+            "BusDVolume" => {
+                let volume = value[1].parse::<f32>().unwrap();
+                Ok(ActivatorsData::BusDVolume(volume))
+            }
+            "BusEVolume" => {
+                let volume = value[1].parse::<f32>().unwrap();
+                Ok(ActivatorsData::BusEVolume(volume))
+            }
+            "BusFVolume" => {
+                let volume = value[1].parse::<f32>().unwrap();
+                Ok(ActivatorsData::BusFVolume(volume))
+            }
+            "BusGVolume" => {
+                let volume = value[1].parse::<f32>().unwrap();
+                Ok(ActivatorsData::BusGVolume(volume))
+            }
             "InputAudio" => {
                 let input_num = value[1].parse::<InputNumber>().unwrap();
                 let is_active = value[2].as_str() == "1";
@@ -276,6 +319,31 @@ impl TryFrom<&[String]> for ActivatorsData {
                 let is_active = value[2].as_str() == "1";
                 Ok(ActivatorsData::InputBusBAudio(input_num, is_active))
             }
+            "InputBusCAudio" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputBusCAudio(input_num, is_active))
+            }
+            "InputBusDAudio" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputBusDAudio(input_num, is_active))
+            }
+            "InputBusEAudio" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputBusEAudio(input_num, is_active))
+            }
+            "InputBusFAudio" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputBusFAudio(input_num, is_active))
+            }
+            "InputBusGAudio" => {
+                let input_num = value[1].parse::<InputNumber>().unwrap();
+                let is_active = value[2].as_str() == "1";
+                Ok(ActivatorsData::InputBusGAudio(input_num, is_active))
+            }
             "InputMasterAudio" => {
                 let input_num = value[1].parse::<InputNumber>().unwrap();
                 let is_active = value[2].as_str() == "1";
@@ -292,6 +360,54 @@ impl TryFrom<&[String]> for ActivatorsData {
             "BusBAudio" => {
                 let is_active = value[1].as_str() == "1";
                 Ok(ActivatorsData::BusBAudio(is_active))
+            }
+            "BusCAudio" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusCAudio(is_active))
+            }
+            "BusDAudio" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusDAudio(is_active))
+            }
+            "BusEAudio" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusEAudio(is_active))
+            }
+            "BusFAudio" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusFAudio(is_active))
+            }
+            "BusGAudio" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusGAudio(is_active))
+            }
+            "BusASolo" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusASolo(is_active))
+            }
+            "BusBSolo" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusBSolo(is_active))
+            }
+            "BusCSolo" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusCSolo(is_active))
+            }
+            "BusDSolo" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusDSolo(is_active))
+            }
+            "BusESolo" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusESolo(is_active))
+            }
+            "BusFSolo" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusFSolo(is_active))
+            }
+            "BusGSolo" => {
+                let is_active = value[1].as_str() == "1";
+                Ok(ActivatorsData::BusGSolo(is_active))
             }
             "FadeToBlack" => {
                 let is_active = value[1].as_str() == "1";
@@ -337,7 +453,10 @@ impl TryFrom<&[String]> for ActivatorsData {
                 let is_active = value[1].as_str() == "1";
                 Ok(ActivatorsData::ReplayPlaying(is_active))
             }
-            _ => Err(anyhow::anyhow!("Unknown Activator")),
+            _ => {
+                println!("Unknown Activator: {:?}", value);
+                Err(anyhow::anyhow!("Unknown Activator"))
+            }
         }
     }
 }
