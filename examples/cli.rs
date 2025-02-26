@@ -12,6 +12,7 @@ async fn main() -> Result<()> {
     let receiver = vmix.receiver;
     let sender = vmix.sender;
 
+    // コマンド受信
     tokio::spawn(async move {
         loop {
             if let Ok(received) = receiver.recv() {
@@ -48,6 +49,7 @@ async fn main() -> Result<()> {
         }
     });
 
+    // コマンド送信
     tokio::spawn(async move {
         loop {
             let command = command_receiver.recv().await.unwrap();
@@ -58,6 +60,7 @@ async fn main() -> Result<()> {
 
     println!("RUNNING...");
 
+    // コマンド送信(標準入力からの読み込み)
     loop {
         let mut buffer = String::new();
         stdin().read_line(&mut buffer).unwrap();
