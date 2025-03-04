@@ -4,6 +4,7 @@ use crate::models::Vmix;
 use std::{
     collections::HashMap, fmt::{self, Display}, io::{BufRead, BufReader, Read}, net::TcpStream
 };
+use urlencoding;
 
 pub type InputNumber = u16; // 0~1000
 
@@ -119,15 +120,15 @@ pub enum SendCommand {
 impl Into<Vec<u8>> for SendCommand {
     fn into(self) -> Vec<u8> {
         match self {
-            Self::TALLY => "TALLY".as_bytes().to_vec(),
-            Self::FUNCTION(func, query) => format!("FUNCTION {} {}", func, query.unwrap_or("".to_string())).into_bytes(),
-            Self::ACTS(command, input) => format!("ACTS {} {}", command, input).into_bytes(),
-            Self::XML => "XML".as_bytes().to_vec(),
-            Self::XMLTEXT(path) => format!("XMLTEXT {}", path).into_bytes(),
-            Self::SUBSCRIBE(command) => format!("SUBSCRIBE {}", command).into_bytes(),
-            Self::UNSUBSCRIBE(command) => format!("UNSUBSCRIBE {}", command).into_bytes(),
-            Self::QUIT => "QUIT".as_bytes().to_vec(),
-            Self::VERSION => "VERSION".as_bytes().to_vec(),
+            Self::TALLY => "TALLY\r\n".as_bytes().to_vec(),
+            Self::FUNCTION(func, query) => format!("FUNCTION {} {}\r\n", func, query.map(|q| urlencoding::encode(&q).into_owned()).unwrap_or("".to_string())).into_bytes(),
+            Self::ACTS(command, input) => format!("ACTS {} {}\r\n", command, input).into_bytes(),
+            Self::XML => "XML\r\n".as_bytes().to_vec(),
+            Self::XMLTEXT(path) => format!("XMLTEXT {}\r\n", path).into_bytes(),
+            Self::SUBSCRIBE(command) => format!("SUBSCRIBE {}\r\n", command).into_bytes(),
+            Self::UNSUBSCRIBE(command) => format!("UNSUBSCRIBE {}\r\n", command).into_bytes(),
+            Self::QUIT => "QUIT\r\n".as_bytes().to_vec(),
+            Self::VERSION => "VERSION\r\n".as_bytes().to_vec(),
             Self::RAW(raw) => raw.into_bytes(),
         }
     }
