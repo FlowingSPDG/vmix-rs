@@ -58,12 +58,20 @@ async fn main() -> Result<()> {
         }
     });
 
+    let command_sender_clone = command_sender.clone();
+    tokio::spawn(async move {
+        loop {
+            command_sender.send(SendCommand::FUNCTION("CUT".to_string(), None)).unwrap();
+            tokio::time::sleep(Duration::from_millis(1000)).await;
+        }
+    });
+
     println!("RUNNING...");
 
     // コマンド送信(標準入力からの読み込み)
     loop {
         let mut buffer = String::new();
         stdin().read_line(&mut buffer).unwrap();
-        command_sender.send(SendCommand::RAW(buffer)).unwrap();
+        command_sender_clone.send(SendCommand::RAW(buffer)).unwrap();
     }
 }
