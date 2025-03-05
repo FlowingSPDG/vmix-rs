@@ -121,7 +121,7 @@ impl Into<Vec<u8>> for SendCommand {
     fn into(self) -> Vec<u8> {
         match self {
             Self::TALLY => "TALLY\r\n".as_bytes().to_vec(),
-            Self::FUNCTION(func, query) => format!("FUNCTION {} {}\r\n", func, query.map(|q| urlencoding::encode(&q).into_owned()).unwrap_or("".to_string())).into_bytes(),
+            Self::FUNCTION(func, query) => format!("FUNCTION {} {}\r\n", func, query.unwrap_or("".to_string())).into_bytes(),
             Self::ACTS(command, input) => format!("ACTS {} {}\r\n", command, input).into_bytes(),
             Self::XML => "XML\r\n".as_bytes().to_vec(),
             Self::XMLTEXT(path) => format!("XMLTEXT {}\r\n", path).into_bytes(),
