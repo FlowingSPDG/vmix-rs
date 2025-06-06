@@ -9,69 +9,127 @@ async fn main() -> Result<()> {
     let vmix = VmixApi::new(addr, Duration::from_secs(2)).await?;
     let (command_sender, mut command_receiver) = unbounded_channel();
 
-    let receiver = vmix.receiver;
-    let sender = vmix.sender;
+    // Clone the sender for different tasks
+    let sender_for_input = vmix.sender.clone();
+    let sender_for_periodic = vmix.sender.clone();
 
-    // コマンド受信
-    tokio::spawn(async move {
+    // Command receiver task with proper error handling and connection monitoring
+    let command_receiver_task = tokio::spawn(async move {
         loop {
-            if let Ok(received) = receiver.recv() {
-                match received {
-                    RecvCommand::TALLY(tally) => {
-                        println!("recv tally {:?}", tally)
+            match vmix.try_receive_command(Duration::from_millis(100)) {
+                Ok(received) => {
+                    match received {
+                        RecvCommand::TALLY(tally) => {
+                            println!("recv tally {:?}", tally)
+                        }
+                        RecvCommand::FUNCTION(func) => {
+                            println!("recv func {:?}", func)
+                        }
+                        RecvCommand::ACTS(acts) => {
+                            println!("recv acts {:?}", acts)
+                        }
+                        RecvCommand::XML(xml) => {
+                            println!("recv xml {:?}", xml.body.version)
+                        }
+                        RecvCommand::XMLTEXT(text) => {
+                            println!("recv text {:?}", text)
+                        }
+                        RecvCommand::SUBSCRIBE(subbed) => {
+                            println!("recv subbed {:?}", subbed)
+                        }
+                        RecvCommand::UNSUBSCRIBE(unsubbed) => {
+                            println!("recv unsubbed {:?}", unsubbed)
+                        }
+                        RecvCommand::QUIT => {
+                            println!("recv quit - disconnecting");
+                            break;
+                        }
+                        RecvCommand::VERSION(version) => {
+                            println!("recv version {:?}", version)
+                        }
                     }
-                    RecvCommand::FUNCTION(func) => {
-                        println!("recv func {:?}", func)
-                    }
-                    RecvCommand::ACTS(acts) => {
-                        println!("recv acts {:?}", acts)
-                    }
-                    RecvCommand::XML(xml) => {
-                        println!("recv xml {:?}", xml.body.version)
-                    }
-                    RecvCommand::XMLTEXT(text) => {
-                        println!("recv text {:?}", text)
-                    }
-                    RecvCommand::SUBSCRIBE(subbed) => {
-                        println!("recv subbed {:?}", subbed)
-                    }
-                    RecvCommand::UNSUBSCRIBE(unsubbed) => {
-                        println!("recv unsubbed {:?}", unsubbed)
-                    }
-                    RecvCommand::QUIT => {
-                        println!("recv quit")
-                    }
-                    RecvCommand::VERSION(version) => {
-                        println!("recv version {:?}", version)
+                }
+                Err(e) => {
+                    if e.to_string().contains("timeout") {
+                        // Timeout is expected, check if connection is still alive
+                        if !vmix.is_connected() {
+                            println!("Connection lost");
+                            break;
+                        }
+                        continue;
+                    } else {
+                        eprintln!("Error receiving command: {}", e);
+                        break;
                     }
                 }
             }
         }
+        println!("Command receiver task ended");
     });
 
-    // コマンド送信
-    tokio::spawn(async move {
-        loop {
-            let command = command_receiver.recv().await.unwrap();
-            // let command = "FUNCTION CUT\r\n".to_string();
-            sender.send(command).unwrap();
+    // Command sender task with proper error handling
+    let command_sender_task = tokio::spawn(async move {
+        while let Some(command) = command_receiver.recv().await {
+            if let Err(e) = sender_for_input.send(command) {
+                eprintln!("Failed to send command: {}", e);
+                break;
+            }
         }
+        println!("Command sender task ended");
     });
 
+    // Periodic command sender (with error handling)
     let command_sender_clone = command_sender.clone();
-    tokio::spawn(async move {
+    let periodic_task = tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(5));
         loop {
-            command_sender.send(SendCommand::FUNCTION("CUT".to_string(), None)).unwrap();
-            tokio::time::sleep(Duration::from_millis(1000)).await;
+            interval.tick().await;
+            if let Err(e) = sender_for_periodic.send(SendCommand::FUNCTION("CUT".to_string(), None)) {
+                eprintln!("Failed to send periodic command: {}", e);
+                break;
+            }
         }
+        println!("Periodic task ended");
     });
 
-    println!("RUNNING...");
+    println!("RUNNING... (Type commands and press Enter, or 'quit' to exit)");
 
-    // コマンド送信(標準入力からの読み込み)
-    loop {
-        let mut buffer = String::new();
-        stdin().read_line(&mut buffer).unwrap();
-        command_sender_clone.send(SendCommand::RAW(buffer)).unwrap();
+    // Command input from stdin with proper error handling
+    let input_task = tokio::task::spawn_blocking(move || {
+        loop {
+            let mut buffer = String::new();
+            match stdin().read_line(&mut buffer) {
+                Ok(_) => {
+                    let trimmed = buffer.trim();
+                    if trimmed == "quit" {
+                        println!("Exiting...");
+                        if let Err(e) = command_sender_clone.send(SendCommand::QUIT) {
+                            eprintln!("Failed to send quit command: {}", e);
+                        }
+                        break;
+                    }
+                    if let Err(e) = command_sender_clone.send(SendCommand::RAW(buffer)) {
+                        eprintln!("Failed to send raw command: {}", e);
+                        break;
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error reading from stdin: {}", e);
+                    break;
+                }
+            }
+        }
+        println!("Input task ended");
+    });
+
+    // Wait for any task to complete (graceful shutdown)
+    tokio::select! {
+        _ = command_receiver_task => {},
+        _ = command_sender_task => {},
+        _ = periodic_task => {},
+        _ = input_task => {},
     }
+
+    println!("Application shutting down");
+    Ok(())
 }
