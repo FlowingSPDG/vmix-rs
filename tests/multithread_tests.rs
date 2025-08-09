@@ -9,6 +9,7 @@ use vmix_rs::vmix::VmixApi;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use vmix_rs::traits::VmixTcpApiClient;
 
     #[tokio::test]
     async fn test_vmix_api_send_sync_traits() {
@@ -23,7 +24,7 @@ mod tests {
     #[tokio::test]
     async fn test_vmix_api_with_arc_mutex() {
         // Test that VmixApi can be used with Arc<Mutex<>>
-        // This simulates the usage pattern mentioned in the prompt
+        // This simulates the TCP-only usage pattern
         
         // Note: This test uses a dummy address that won't connect
         // In a real scenario, you would use a valid vMix instance
@@ -42,9 +43,11 @@ mod tests {
                 
                 // This should compile without errors if Send + Sync are properly implemented
                 tokio::spawn(async move {
-                    let _client = api_clone.lock().await;
-                    // In a real test, you would call methods here:
-                    // let result = client.get_active_input().await;
+                    let client = api_clone.lock().await;
+                    // Test TCP-specific methods
+                    let _connected = client.is_connected();
+                    // In a real test with a running vMix instance:
+                    // let _result = client.send_command(SendCommand::TALLY);
                 })
                 .await
                 .unwrap();
@@ -71,8 +74,9 @@ mod tests {
                 
                 // This should compile without errors if Send + Sync are properly implemented
                 tokio::spawn(async move {
-                    let _client = api_clone.lock().unwrap();
-                    // In a real test, you would call methods here
+                    let client = api_clone.lock().unwrap();
+                    // Test TCP-specific methods (non-async)
+                    let _connected = client.is_connected();
                 })
                 .await
                 .unwrap();
@@ -84,8 +88,8 @@ mod tests {
     }
 
     #[tokio::test] 
-    async fn test_spawn_multiple_tasks() {
-        // Test spawning multiple tasks that would use VmixApi
+    async fn test_spawn_multiple_tasks_tcp_only() {
+        // Test spawning multiple tasks that would use VmixApi for TCP operations
         let addr: SocketAddr = "127.0.0.1:8099".parse().unwrap();
         let timeout = Duration::from_secs(1);
         
@@ -100,10 +104,11 @@ mod tests {
                         let api_clone = api_arc.clone();
                         tokio::spawn(async move {
                             let client = api_clone.lock().await;
-                            // Test that async methods return Send futures
+                            // Test TCP-specific operations
                             let _connected = client.is_connected();
                             // In a real scenario with a running vMix instance:
-                            // let _active = client.get_active_input().await.ok();
+                            // let sender = client.get_sender();
+                            // let _result = client.try_receive_command(Duration::from_millis(100));
                         })
                     })
                     .collect();
@@ -115,6 +120,35 @@ mod tests {
             }
             Err(_) => {
                 // Connection failed as expected
+            }
+        }
+    }
+
+    #[test]
+    fn test_tcp_api_traits() {
+        // Compile-time test to ensure VmixApi implements VmixTcpApiClient
+        fn assert_tcp_api_client<T: VmixTcpApiClient>() {}
+        assert_tcp_api_client::<VmixApi>();
+    }
+
+    #[tokio::test]
+    async fn test_shutdown_handling() {
+        // Test that VmixApi shuts down properly even when connection fails
+        let addr: SocketAddr = "127.0.0.1:8099".parse().unwrap();
+        let timeout = Duration::from_millis(100); // Short timeout for quick test
+        
+        let result = VmixApi::new(addr, timeout).await;
+        
+        match result {
+            Ok(api) => {
+                // If connection succeeds, test normal shutdown
+                assert!(api.is_connected());
+                drop(api); // This should trigger clean shutdown
+                // If we reach here, shutdown didn't hang
+            }
+            Err(_) => {
+                // Expected - no vMix instance running
+                // This is fine for testing shutdown behavior
             }
         }
     }
