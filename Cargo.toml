@@ -3,7 +3,7 @@ name = "vmix_rs"
 version = "0.1.0"
 edition = "2021"
 
-authors = ["Shugo Kawamura <shugo_k@flowing.tokyo>"]
+authors = ["Shugo Kawamura <ruk1ium@gmail.com>"]
 repository = "https://github.com/FlowingSPDG/vmix-rs"
 license = "MIT"
 
