@@ -365,4 +365,7 @@ pub enum State {
 
     #[serde(rename = "Running")]
     Running,
+
+    #[serde(rename = "Completed")]
+    Completed,
 }

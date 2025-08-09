@@ -1,6 +1,22 @@
-use std::{io::Write, net::{SocketAddr, TcpStream}, sync::{mpsc::{Receiver, SyncSender}, Arc, atomic::{AtomicBool, Ordering}}, time::Duration, thread::JoinHandle};
+use crate::{
+    commands::{InputNumber, RecvCommand, SendCommand, TallyData},
+    models::Vmix,
+    traits::{VmixApiClient, VmixTcpApiClient},
+};
 use anyhow::Result;
-use crate::commands::{RecvCommand, SendCommand};
+use async_trait::async_trait;
+use std::{
+    collections::HashMap,
+    io::Write,
+    net::{SocketAddr, TcpStream},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        mpsc::{Receiver, SyncSender},
+        Arc,
+    },
+    thread::JoinHandle,
+    time::Duration,
+};
 
 pub struct VmixApi {
     pub sender: SyncSender<SendCommand>,
@@ -14,10 +30,10 @@ impl Drop for VmixApi {
     fn drop(&mut self) {
         // Signal all threads to shutdown
         self.shutdown_signal.store(true, Ordering::Relaxed);
-        
+
         // Send a final message to wake up the writer thread if it's waiting
         let _ = self.sender.try_send(SendCommand::QUIT);
-        
+
         // Wait for threads to complete
         if let Some(handle) = self.reader_handle.take() {
             let _ = handle.join();
@@ -29,42 +45,43 @@ impl Drop for VmixApi {
 }
 
 impl VmixApi {
-    pub async fn new(
-        remote: SocketAddr,
-        timeout: Duration,
-    ) -> Result<Self> {
+    pub async fn new(remote: SocketAddr, timeout: Duration) -> Result<Self> {
         // Connect with proper error handling
         let stream = TcpStream::connect_timeout(&remote, timeout)
             .map_err(|e| anyhow::anyhow!("Failed to connect to {}: {}", remote, e))?;
-        
-        stream.set_read_timeout(Some(timeout))
+
+        stream
+            .set_read_timeout(Some(timeout))
             .map_err(|e| anyhow::anyhow!("Failed to set read timeout: {}", e))?;
-        
-        stream.set_write_timeout(Some(timeout))
+
+        stream
+            .set_write_timeout(Some(timeout))
             .map_err(|e| anyhow::anyhow!("Failed to set write timeout: {}", e))?;
-    
+
         // Create writer stream with proper error handling
-        let writer_stream = stream.try_clone()
+        let writer_stream = stream
+            .try_clone()
             .map_err(|e| anyhow::anyhow!("Failed to clone stream for writer: {}", e))?;
-    
+
         // Shared shutdown signal
         let shutdown_signal = Arc::new(AtomicBool::new(false));
-        
+
         // Reader thread
         let (reader_sender, reader_receiver): (SyncSender<RecvCommand>, Receiver<RecvCommand>) =
             std::sync::mpsc::sync_channel(1);
-        
+
         let reader_shutdown = shutdown_signal.clone();
-        let reader_stream = stream.try_clone()
+        let reader_stream = stream
+            .try_clone()
             .map_err(|e| anyhow::anyhow!("Failed to clone stream for reader: {}", e))?;
-            
+
         let reader_handle = std::thread::spawn(move || {
             loop {
                 // Check shutdown signal
                 if reader_shutdown.load(Ordering::Relaxed) {
                     break;
                 }
-                
+
                 // Try to read from stream with timeout handling
                 match (&reader_stream).try_into() {
                     Ok(command) => {
@@ -80,9 +97,9 @@ impl VmixApi {
                                     // Timeout is expected, continue loop
                                     continue;
                                 }
-                                std::io::ErrorKind::ConnectionAborted |
-                                std::io::ErrorKind::ConnectionReset |
-                                std::io::ErrorKind::UnexpectedEof => {
+                                std::io::ErrorKind::ConnectionAborted
+                                | std::io::ErrorKind::ConnectionReset
+                                | std::io::ErrorKind::UnexpectedEof => {
                                     // Connection closed by remote
                                     eprintln!("Connection closed by remote: {}", err);
                                     break;
@@ -100,20 +117,20 @@ impl VmixApi {
                 }
             }
         });
-    
+
         let (writer_sender, writer_receiver): (SyncSender<SendCommand>, Receiver<SendCommand>) =
             std::sync::mpsc::sync_channel(1);
-    
+
         let writer_shutdown = shutdown_signal.clone();
         let writer_handle = std::thread::spawn(move || {
             let mut writer = writer_stream;
-            
+
             loop {
                 // Check shutdown signal
                 if writer_shutdown.load(Ordering::Relaxed) {
                     break;
                 }
-                
+
                 // Try to receive with timeout to allow checking shutdown signal
                 match writer_receiver.recv_timeout(Duration::from_millis(100)) {
                     Ok(command) => {
@@ -126,13 +143,13 @@ impl VmixApi {
                             // Quit command processed, exit thread
                             break;
                         }
-                        
+
                         let bytes: Vec<u8> = command.into();
                         if writer.write_all(&bytes).is_err() {
                             eprintln!("Failed to write to stream");
                             break;
                         }
-                        
+
                         if writer.flush().is_err() {
                             eprintln!("Failed to flush stream");
                             break;
@@ -149,35 +166,113 @@ impl VmixApi {
                 }
             }
         });
-        
-        Ok(Self { 
-            sender: writer_sender, 
+
+        Ok(Self {
+            sender: writer_sender,
             receiver: reader_receiver,
             shutdown_signal,
             reader_handle: Some(reader_handle),
             writer_handle: Some(writer_handle),
         })
     }
-    
+
     /// Send a command to vMix
     pub fn send_command(&self, command: SendCommand) -> Result<()> {
-        self.sender.send(command)
+        self.sender
+            .send(command)
             .map_err(|e| anyhow::anyhow!("Failed to send command: {}", e))
     }
-    
+
     /// Try to receive a command from vMix with timeout
     pub fn try_receive_command(&self, timeout: Duration) -> Result<RecvCommand> {
-        self.receiver.recv_timeout(timeout)
+        self.receiver
+            .recv_timeout(timeout)
             .map_err(|e| anyhow::anyhow!("Failed to receive command: {}", e))
     }
-    
+
     /// Gracefully disconnect from vMix
     pub fn disconnect(&self) -> Result<()> {
         self.send_command(SendCommand::QUIT)
     }
-    
+
     /// Check if the connection is still alive
     pub fn is_connected(&self) -> bool {
         !self.shutdown_signal.load(Ordering::Relaxed)
+    }
+}
+
+#[async_trait(?Send)]
+impl VmixApiClient for VmixApi {
+    async fn execute_function(
+        &self,
+        function: &str,
+        params: &HashMap<String, String>,
+    ) -> Result<()> {
+        // Build the function string with parameters
+        let function_string = if params.is_empty() {
+            function.to_string()
+        } else {
+            let params_str = params
+                .iter()
+                .map(|(k, v)| format!("{}={}", k, urlencoding::encode(v)))
+                .collect::<Vec<_>>()
+                .join("&");
+            format!("{}?{}", function, params_str)
+        };
+
+        self.send_command(SendCommand::FUNCTION(function_string, None))
+    }
+
+    async fn get_xml_state(&self) -> Result<Vmix> {
+        // Send XML command and wait for response
+        self.send_command(SendCommand::XML)?;
+
+        // Try to receive XML response with timeout
+        let timeout = Duration::from_secs(5);
+        match self.try_receive_command(timeout)? {
+            RecvCommand::XML(xml_response) => {
+                // Parse the XML response
+                serde_xml_rs::from_str(&xml_response.body)
+                    .map_err(|e| anyhow::anyhow!("Failed to parse XML response: {}", e))
+            }
+            other => Err(anyhow::anyhow!("Expected XML response, got: {:?}", other)),
+        }
+    }
+
+    async fn get_tally_data(&self) -> Result<HashMap<InputNumber, TallyData>> {
+        // Send TALLY command and wait for response
+        self.send_command(SendCommand::TALLY)?;
+
+        // Try to receive tally response with timeout
+        let timeout = Duration::from_secs(5);
+        match self.try_receive_command(timeout)? {
+            RecvCommand::TALLY(tally_response) => Ok(tally_response.body),
+            other => Err(anyhow::anyhow!("Expected TALLY response, got: {:?}", other)),
+        }
+    }
+
+    async fn is_connected(&self) -> bool {
+        self.is_connected()
+    }
+
+    async fn get_active_input(&self) -> Result<InputNumber> {
+        let vmix_state = self.get_xml_state().await?;
+        Ok(vmix_state.active.parse().unwrap_or(0))
+    }
+
+    async fn get_preview_input(&self) -> Result<InputNumber> {
+        let vmix_state = self.get_xml_state().await?;
+        Ok(vmix_state.preview.parse().unwrap_or(0))
+    }
+}
+
+#[async_trait(?Send)]
+impl VmixTcpApiClient for VmixApi {
+    fn try_receive_command(&self, timeout: Duration) -> Result<RecvCommand> {
+        self.try_receive_command(timeout)
+    }
+
+    fn get_sender(&self) -> &SyncSender<SendCommand> {
+        &self.sender
     }
 }

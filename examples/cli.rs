@@ -1,7 +1,10 @@
 use anyhow::Result;
 use std::{io::stdin, net::SocketAddr, time::Duration};
 use tokio::sync::mpsc::unbounded_channel;
-use vmix::{commands::{RecvCommand, SendCommand}, vmix::VmixApi};
+use vmix_rs::{
+    commands::{RecvCommand, SendCommand},
+    vmix::VmixApi,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -17,38 +20,36 @@ async fn main() -> Result<()> {
     let command_receiver_task = tokio::spawn(async move {
         loop {
             match vmix.try_receive_command(Duration::from_millis(100)) {
-                Ok(received) => {
-                    match received {
-                        RecvCommand::TALLY(tally) => {
-                            println!("recv tally {:?}", tally)
-                        }
-                        RecvCommand::FUNCTION(func) => {
-                            println!("recv func {:?}", func)
-                        }
-                        RecvCommand::ACTS(acts) => {
-                            println!("recv acts {:?}", acts)
-                        }
-                        RecvCommand::XML(xml) => {
-                            println!("recv xml {:?}", xml.body.version)
-                        }
-                        RecvCommand::XMLTEXT(text) => {
-                            println!("recv text {:?}", text)
-                        }
-                        RecvCommand::SUBSCRIBE(subbed) => {
-                            println!("recv subbed {:?}", subbed)
-                        }
-                        RecvCommand::UNSUBSCRIBE(unsubbed) => {
-                            println!("recv unsubbed {:?}", unsubbed)
-                        }
-                        RecvCommand::QUIT => {
-                            println!("recv quit - disconnecting");
-                            break;
-                        }
-                        RecvCommand::VERSION(version) => {
-                            println!("recv version {:?}", version)
-                        }
+                Ok(received) => match received {
+                    RecvCommand::TALLY(tally) => {
+                        println!("recv tally {:?}", tally)
                     }
-                }
+                    RecvCommand::FUNCTION(func) => {
+                        println!("recv func {:?}", func)
+                    }
+                    RecvCommand::ACTS(acts) => {
+                        println!("recv acts {:?}", acts)
+                    }
+                    RecvCommand::XML(xml) => {
+                        println!("recv xml (length: {} chars)", xml.body.len())
+                    }
+                    RecvCommand::XMLTEXT(text) => {
+                        println!("recv text {:?}", text)
+                    }
+                    RecvCommand::SUBSCRIBE(subbed) => {
+                        println!("recv subbed {:?}", subbed)
+                    }
+                    RecvCommand::UNSUBSCRIBE(unsubbed) => {
+                        println!("recv unsubbed {:?}", unsubbed)
+                    }
+                    RecvCommand::QUIT => {
+                        println!("recv quit - disconnecting");
+                        break;
+                    }
+                    RecvCommand::VERSION(version) => {
+                        println!("recv version {:?}", version)
+                    }
+                },
                 Err(e) => {
                     if e.to_string().contains("timeout") {
                         // Timeout is expected, check if connection is still alive
@@ -84,7 +85,8 @@ async fn main() -> Result<()> {
         let mut interval = tokio::time::interval(Duration::from_secs(5));
         loop {
             interval.tick().await;
-            if let Err(e) = sender_for_periodic.send(SendCommand::FUNCTION("CUT".to_string(), None)) {
+            if let Err(e) = sender_for_periodic.send(SendCommand::FUNCTION("CUT".to_string(), None))
+            {
                 eprintln!("Failed to send periodic command: {}", e);
                 break;
             }

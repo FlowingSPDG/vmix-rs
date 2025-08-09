@@ -1,10 +1,11 @@
 use crate::acts::ActivatorsData;
 use crate::commands::Status::Length;
-use crate::models::Vmix;
 use std::{
-    collections::HashMap, fmt::{self, Display}, io::{BufRead, BufReader, Read}, net::TcpStream
+    collections::HashMap,
+    fmt::{self, Display},
+    io::{BufRead, BufReader, Read},
+    net::TcpStream,
 };
-use urlencoding;
 
 pub type InputNumber = u16; // 0~1000
 
@@ -60,9 +61,10 @@ pub struct FunctionResponse {
     pub body: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct XMLResponse {
     pub status: Status,
-    pub body: Vmix,
+    pub body: String, // Change to String for raw XML content
 }
 #[derive(Debug)]
 pub struct XMLTextResponse {
@@ -91,6 +93,7 @@ pub struct ActivatorsResponse {
     pub body: ActivatorsData,
 }
 
+#[derive(Debug)]
 pub enum RecvCommand {
     TALLY(TallyResponse),
     FUNCTION(FunctionResponse),
@@ -121,7 +124,9 @@ impl Into<Vec<u8>> for SendCommand {
     fn into(self) -> Vec<u8> {
         match self {
             Self::TALLY => "TALLY\r\n".as_bytes().to_vec(),
-            Self::FUNCTION(func, query) => format!("FUNCTION {} {}\r\n", func, query.unwrap_or("".to_string())).into_bytes(),
+            Self::FUNCTION(func, query) => {
+                format!("FUNCTION {} {}\r\n", func, query.unwrap_or("".to_string())).into_bytes()
+            }
             Self::ACTS(command, input) => format!("ACTS {} {}\r\n", command, input).into_bytes(),
             Self::XML => "XML\r\n".as_bytes().to_vec(),
             Self::XMLTEXT(path) => format!("XMLTEXT {}\r\n", path).into_bytes(),
@@ -136,7 +141,7 @@ impl Into<Vec<u8>> for SendCommand {
 
 pub enum SUBSCRIBECommand {
     TALLY,
-    ACTS
+    ACTS,
 }
 
 impl Display for SUBSCRIBECommand {
@@ -224,8 +229,7 @@ impl TryFrom<&TcpStream> for RecvCommand {
                     // remove \r\n
                     let xml = xml.lines().collect::<String>();
 
-                    let vmix: Vmix = serde_xml_rs::from_str(xml.as_str()).unwrap();
-                    return Ok(Self::XML(XMLResponse { status, body: vmix }));
+                    return Ok(Self::XML(XMLResponse { status, body: xml }));
                 }
                 Err(anyhow::anyhow!("Failed to read XML"))
             }
