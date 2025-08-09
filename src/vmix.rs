@@ -22,6 +22,8 @@ pub struct VmixApi {
     pub sender: SyncSender<SendCommand>,
     pub receiver: Receiver<RecvCommand>,
     shutdown_signal: Arc<AtomicBool>,
+    error_signal: Arc<AtomicBool>, // New: shared error state
+    original_stream: Arc<std::sync::Mutex<Option<TcpStream>>>, // New: keep original stream for explicit shutdown
     reader_handle: Option<JoinHandle<()>>,
     writer_handle: Option<JoinHandle<()>>,
 }
@@ -30,6 +32,13 @@ impl Drop for VmixApi {
     fn drop(&mut self) {
         // Signal all threads to shutdown
         self.shutdown_signal.store(true, Ordering::Relaxed);
+        
+        // Explicitly close the original stream to force both reader and writer to exit
+        if let Ok(mut stream_guard) = self.original_stream.lock() {
+            if let Some(stream) = stream_guard.take() {
+                let _ = stream.shutdown(std::net::Shutdown::Both);
+            }
+        }
 
         // Send a final message to wake up the writer thread if it's waiting
         let _ = self.sender.try_send(SendCommand::QUIT);
@@ -58,27 +67,29 @@ impl VmixApi {
             .set_write_timeout(Some(timeout))
             .map_err(|e| anyhow::anyhow!("Failed to set write timeout: {}", e))?;
 
-        // Create writer stream with proper error handling
+        // Create stream clones for reader and writer
+        let reader_stream = stream
+            .try_clone()
+            .map_err(|e| anyhow::anyhow!("Failed to clone stream for reader: {}", e))?;
         let writer_stream = stream
             .try_clone()
             .map_err(|e| anyhow::anyhow!("Failed to clone stream for writer: {}", e))?;
 
-        // Shared shutdown signal
+        // Shared signals for coordination
         let shutdown_signal = Arc::new(AtomicBool::new(false));
+        let error_signal = Arc::new(AtomicBool::new(false));
+        let original_stream = Arc::new(std::sync::Mutex::new(Some(stream)));
 
-        // Reader thread
+        // Reader thread setup
         let (reader_sender, reader_receiver): (SyncSender<RecvCommand>, Receiver<RecvCommand>) =
             std::sync::mpsc::sync_channel(1);
 
         let reader_shutdown = shutdown_signal.clone();
-        let reader_stream = stream
-            .try_clone()
-            .map_err(|e| anyhow::anyhow!("Failed to clone stream for reader: {}", e))?;
-
+        let reader_error = error_signal.clone();
         let reader_handle = std::thread::spawn(move || {
             loop {
-                // Check shutdown signal
-                if reader_shutdown.load(Ordering::Relaxed) {
+                // Check shutdown or error signals
+                if reader_shutdown.load(Ordering::Relaxed) || reader_error.load(Ordering::Relaxed) {
                     break;
                 }
 
@@ -100,12 +111,15 @@ impl VmixApi {
                                 std::io::ErrorKind::ConnectionAborted
                                 | std::io::ErrorKind::ConnectionReset
                                 | std::io::ErrorKind::UnexpectedEof => {
-                                    // Connection closed by remote
+                                    // Connection error - signal error to writer thread
                                     eprintln!("Connection closed by remote: {}", err);
+                                    reader_error.store(true, Ordering::Relaxed);
                                     break;
                                 }
                                 _ => {
+                                    // Other IO errors - signal error to writer thread
                                     eprintln!("IO error in reader thread: {}", err);
+                                    reader_error.store(true, Ordering::Relaxed);
                                     break;
                                 }
                             }
@@ -118,27 +132,29 @@ impl VmixApi {
             }
         });
 
+        // Writer thread setup
         let (writer_sender, writer_receiver): (SyncSender<SendCommand>, Receiver<SendCommand>) =
             std::sync::mpsc::sync_channel(1);
 
         let writer_shutdown = shutdown_signal.clone();
+        let writer_error = error_signal.clone();
         let writer_handle = std::thread::spawn(move || {
             let mut writer = writer_stream;
 
             loop {
-                // Check shutdown signal
-                if writer_shutdown.load(Ordering::Relaxed) {
+                // Check shutdown or error signals
+                if writer_shutdown.load(Ordering::Relaxed) || writer_error.load(Ordering::Relaxed) {
                     break;
                 }
 
-                // Try to receive with timeout to allow checking shutdown signal
+                // Try to receive with timeout to allow checking signals
                 match writer_receiver.recv_timeout(Duration::from_millis(100)) {
                     Ok(command) => {
                         // Check for quit command
                         if matches!(command, SendCommand::QUIT) {
                             let bytes: Vec<u8> = command.into();
                             if writer.write_all(&bytes).is_err() {
-                                break;
+                                writer_error.store(true, Ordering::Relaxed);
                             }
                             // Quit command processed, exit thread
                             break;
@@ -147,16 +163,18 @@ impl VmixApi {
                         let bytes: Vec<u8> = command.into();
                         if writer.write_all(&bytes).is_err() {
                             eprintln!("Failed to write to stream");
+                            writer_error.store(true, Ordering::Relaxed);
                             break;
                         }
 
                         if writer.flush().is_err() {
                             eprintln!("Failed to flush stream");
+                            writer_error.store(true, Ordering::Relaxed);
                             break;
                         }
                     }
                     Err(std::sync::mpsc::RecvTimeoutError::Timeout) => {
-                        // Timeout, continue to check shutdown signal
+                        // Timeout, continue to check signals
                         continue;
                     }
                     Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => {
@@ -171,6 +189,8 @@ impl VmixApi {
             sender: writer_sender,
             receiver: reader_receiver,
             shutdown_signal,
+            error_signal,
+            original_stream,
             reader_handle: Some(reader_handle),
             writer_handle: Some(writer_handle),
         })
@@ -197,7 +217,7 @@ impl VmixApi {
 
     /// Check if the connection is still alive
     pub fn is_connected(&self) -> bool {
-        !self.shutdown_signal.load(Ordering::Relaxed)
+        !self.shutdown_signal.load(Ordering::Relaxed) && !self.error_signal.load(Ordering::Relaxed)
     }
 }
 
