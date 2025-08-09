@@ -185,7 +185,11 @@ impl HttpVmixClient {
     }
 }
 
-#[async_trait(?Send)]
+// HttpVmixClientはマルチスレッド環境で安全に使用できる
+unsafe impl Send for HttpVmixClient {}
+unsafe impl Sync for HttpVmixClient {}
+
+#[async_trait]
 impl VmixApiClient for HttpVmixClient {
     async fn execute_function(
         &self,

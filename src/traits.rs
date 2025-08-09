@@ -6,11 +6,11 @@ use anyhow::Result;
 use async_trait::async_trait;
 use std::collections::HashMap;
 
-/// Unified trait interface for both TCP and HTTP vMix API clients
+/// HTTP vMix API client trait
 ///
-/// This trait provides a consistent API regardless of the underlying
-/// communication protocol (TCP or HTTP).
-#[async_trait(?Send)]
+/// This trait is designed specifically for HTTP-based communication
+/// with vMix instances, providing a request-response pattern.
+#[async_trait]
 pub trait VmixApiClient {
     /// Execute a vMix function with optional parameters
     ///
@@ -55,38 +55,57 @@ pub trait VmixApiClient {
     async fn get_preview_input(&self) -> Result<InputNumber>;
 }
 
-/// Extended trait for TCP-specific functionality
+/// TCP-specific vMix API client trait
 ///
-/// TCP clients can provide real-time event streaming and subscription
-/// capabilities that are not available via HTTP.
-#[async_trait(?Send)]
-pub trait VmixTcpApiClient: VmixApiClient {
-    /// Try to receive a command from the TCP stream (non-blocking)
+/// This trait is designed specifically for TCP-based communication
+/// with vMix instances. It focuses on command sending and real-time
+/// event streaming without expecting specific responses to commands.
+/// 
+/// The TCP API is asynchronous by nature - you send commands and
+/// receive events independently. Commands may not have immediate
+/// responses, and other events (ACTS, VERSION, etc.) may arrive
+/// before your command's response.
+pub trait VmixTcpApiClient {
+    /// Send a command to vMix (non-blocking)
+    ///
+    /// This method sends a command to vMix but does not wait for
+    /// a specific response. Use try_receive_command to get events.
+    fn send_command(&self, command: crate::commands::SendCommand) -> Result<()>;
+
+    /// Try to receive any command/event from the TCP stream (non-blocking)
     ///
     /// This method returns immediately and provides access to real-time
-    /// events from vMix such as tally updates, activator changes, etc.
+    /// events from vMix such as tally updates, activator changes, XML responses, etc.
+    /// The events may not correspond to your sent commands and can arrive in any order.
     fn try_receive_command(&self, timeout: std::time::Duration) -> Result<RecvCommand>;
+
+    /// Check if the TCP connection is still alive
+    fn is_connected(&self) -> bool;
 
     /// Get a sender for sending commands to the TCP connection
     ///
     /// This provides access to the underlying command sender for advanced
     /// use cases that need direct control over the TCP communication.
     fn get_sender(&self) -> &std::sync::mpsc::SyncSender<crate::commands::SendCommand>;
+
+    /// Gracefully disconnect from vMix
+    fn disconnect(&self) -> Result<()>;
 }
 
 /// Factory trait for creating vMix API clients
 ///
 /// This trait allows for easy creation of different client types
-/// with consistent configuration parameters.
+/// with consistent configuration parameters. TCP and HTTP clients
+/// are now completely separate with their own specialized traits.
 pub trait VmixClientFactory {
     type TcpClient: VmixTcpApiClient + Send + Sync;
     type HttpClient: VmixApiClient + Send + Sync;
 
     /// Create a new TCP client
-    async fn create_tcp_client(
+    fn create_tcp_client(
         addr: std::net::SocketAddr,
         timeout: std::time::Duration,
-    ) -> Result<Self::TcpClient>;
+    ) -> impl std::future::Future<Output = Result<Self::TcpClient>> + Send;
 
     /// Create a new HTTP client
     fn create_http_client(

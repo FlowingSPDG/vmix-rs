@@ -83,6 +83,10 @@ pub enum ActivatorsData {
     ReplayPlaying(bool),
 }
 
+// ActivatorsDataはマルチスレッド環境で安全に使用できる
+unsafe impl Send for ActivatorsData {}
+unsafe impl Sync for ActivatorsData {}
+
 // Helper functions to extract common functionality and handle errors safely
 fn parse_input_number(value: &str) -> InputNumber {
     value.parse::<InputNumber>().unwrap_or_else(|_| {

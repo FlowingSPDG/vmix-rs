@@ -120,6 +120,47 @@ pub enum SendCommand {
     RAW(String),
 }
 
+// SendCommandとRecvCommandはマルチスレッド環境で安全に使用できる
+unsafe impl Send for SendCommand {}
+unsafe impl Sync for SendCommand {}
+
+unsafe impl Send for RecvCommand {}
+unsafe impl Sync for RecvCommand {}
+
+// 関連する構造体とenumにもSend + Syncを実装
+unsafe impl Send for TallyData {}
+unsafe impl Sync for TallyData {}
+
+unsafe impl Send for TallyResponse {}
+unsafe impl Sync for TallyResponse {}
+
+unsafe impl Send for FunctionResponse {}
+unsafe impl Sync for FunctionResponse {}
+
+unsafe impl Send for XMLResponse {}
+unsafe impl Sync for XMLResponse {}
+
+unsafe impl Send for XMLTextResponse {}
+unsafe impl Sync for XMLTextResponse {}
+
+unsafe impl Send for SubscribeResponse {}
+unsafe impl Sync for SubscribeResponse {}
+
+unsafe impl Send for UnsubscribeResponse {}
+unsafe impl Sync for UnsubscribeResponse {}
+
+unsafe impl Send for VersionResponse {}
+unsafe impl Sync for VersionResponse {}
+
+unsafe impl Send for ActivatorsResponse {}
+unsafe impl Sync for ActivatorsResponse {}
+
+unsafe impl Send for SUBSCRIBECommand {}
+unsafe impl Sync for SUBSCRIBECommand {}
+
+unsafe impl Send for Status {}
+unsafe impl Sync for Status {}
+
 impl Into<Vec<u8>> for SendCommand {
     fn into(self) -> Vec<u8> {
         match self {

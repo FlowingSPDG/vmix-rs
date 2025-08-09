@@ -1,6 +1,11 @@
 use anyhow::Result;
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
-use vmix_rs::{http::HttpVmixClient, traits::VmixApiClient, vmix::VmixApi};
+use vmix_rs::{
+    commands::{SendCommand, SUBSCRIBECommand},
+    http::HttpVmixClient,
+
+    vmix::VmixApi,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -22,73 +27,51 @@ async fn main() -> Result<()> {
     println!("   TCP Connected:  {}", tcp_client.is_connected());
     println!("   HTTP Connected: {}", http_client.is_connected().await);
 
-    // Compare XML state retrieval performance
-    println!("\n2. XML State Retrieval:");
-
+    // Compare command sending performance (TCP) vs request-response (HTTP)
+    println!("\n2. Command Execution Comparison:");
+    
+    // TCP: Send command without waiting for response
+    println!("   TCP Command Sending (async, no response wait):");
     let start = std::time::Instant::now();
-    match tcp_client.get_xml_state().await {
-        Ok(state) => {
+    match tcp_client.send_command(SendCommand::XML) {
+        Ok(_) => {
             let duration = start.elapsed();
-            println!(
-                "   TCP:  ✅ Retrieved in {:?} - {} inputs",
-                duration,
-                state.inputs.input.len()
-            );
+            println!("      ✅ XML command sent in {:?}", duration);
         }
-        Err(e) => println!("   TCP:  ❌ Failed: {}", e),
+        Err(e) => println!("      ❌ Failed to send XML command: {}", e),
     }
 
+    // TCP: Try to receive any event (may or may not be related to our command)
+    match tcp_client.try_receive_command(Duration::from_secs(1)) {
+        Ok(event) => println!("      ✅ Received event: {:?}", event),
+        Err(e) => println!("      ⏰ No events within timeout: {}", e),
+    }
+
+    // HTTP: Request with guaranteed response
+    println!("\n   HTTP Request-Response (synchronous):");
     let start = std::time::Instant::now();
     match http_client.get_xml_state().await {
         Ok(state) => {
             let duration = start.elapsed();
             println!(
-                "   HTTP: ✅ Retrieved in {:?} - {} inputs",
+                "      ✅ Retrieved XML state in {:?} - {} inputs",
                 duration,
                 state.inputs.input.len()
             );
         }
-        Err(e) => println!("   HTTP: ❌ Failed: {}", e),
+        Err(e) => println!("      ❌ Failed: {}", e),
     }
 
-    // Compare tally data retrieval
-    println!("\n3. Tally Data Retrieval:");
-
-    let start = std::time::Instant::now();
-    match tcp_client.get_tally_data().await {
-        Ok(tally_data) => {
-            let duration = start.elapsed();
-            println!(
-                "   TCP:  ✅ Retrieved in {:?} - {} inputs",
-                duration,
-                tally_data.len()
-            );
-        }
-        Err(e) => println!("   TCP:  ❌ Failed: {}", e),
-    }
-
-    let start = std::time::Instant::now();
-    match http_client.get_tally_data().await {
-        Ok(tally_data) => {
-            let duration = start.elapsed();
-            println!(
-                "   HTTP: ✅ Retrieved in {:?} - {} inputs",
-                duration,
-                tally_data.len()
-            );
-        }
-        Err(e) => println!("   HTTP: ❌ Failed: {}", e),
-    }
-
-    // Test function execution
-    println!("\n4. Function Execution (Cut):");
+    // Compare function execution
+    println!("\n3. Function Execution:");
     let params = HashMap::new();
 
+    // TCP: Send function command (fire-and-forget)
     let start = std::time::Instant::now();
-    match tcp_client.execute_function("Cut", &params).await {
+    match tcp_client.send_command(SendCommand::FUNCTION("Cut".to_string(), None)) {
         Ok(_) => {
             let duration = start.elapsed();
-            println!("   TCP:  ✅ Executed in {:?}", duration);
+            println!("   TCP:  ✅ Cut command sent in {:?}", duration);
         }
         Err(e) => println!("   TCP:  ❌ Failed: {}", e),
     }
@@ -96,46 +79,76 @@ async fn main() -> Result<()> {
     // Wait a bit before HTTP request
     tokio::time::sleep(Duration::from_millis(100)).await;
 
+    // HTTP: Execute function with response confirmation
     let start = std::time::Instant::now();
     match http_client.execute_function("Cut", &params).await {
         Ok(_) => {
             let duration = start.elapsed();
-            println!("   HTTP: ✅ Executed in {:?}", duration);
+            println!("   HTTP: ✅ Cut executed and confirmed in {:?}", duration);
         }
         Err(e) => println!("   HTTP: ❌ Failed: {}", e),
     }
 
     // Demonstrate TCP-specific real-time capabilities
-    println!("\n5. TCP Real-time Event Handling:");
-    println!("   Attempting to receive real-time events (5 second timeout)...");
-
-    match tcp_client.try_receive_command(Duration::from_secs(5)) {
-        Ok(event) => println!("   ✅ Received event: {:?}", event),
-        Err(e) => println!("   ⏰ No events within timeout (this is normal): {}", e),
+    println!("\n4. TCP Real-time Event Streaming:");
+    println!("   Subscribing to TALLY updates...");
+    
+    match tcp_client.send_command(SendCommand::SUBSCRIBE(SUBSCRIBECommand::TALLY)) {
+        Ok(_) => println!("   ✅ TALLY subscription sent"),
+        Err(e) => println!("   ❌ Failed to subscribe: {}", e),
     }
 
-    println!("   Note: HTTP API does not support real-time events");
+    println!("   Listening for events (3 second timeout)...");
+    for i in 1..=3 {
+        match tcp_client.try_receive_command(Duration::from_secs(1)) {
+            Ok(event) => println!("   Event {}: {:?}", i, event),
+            Err(e) => println!("   Timeout {}: {}", i, e),
+        }
+    }
+
+    println!("   Note: HTTP API does not support real-time event streaming");
+
+    // Test HTTP tally data retrieval for comparison
+    println!("\n5. HTTP Tally Data (snapshot):");
+    let start = std::time::Instant::now();
+    match http_client.get_tally_data().await {
+        Ok(tally_data) => {
+            let duration = start.elapsed();
+            println!(
+                "   ✅ HTTP tally snapshot retrieved in {:?} - {} inputs",
+                duration,
+                tally_data.len()
+            );
+        }
+        Err(e) => println!("   ❌ HTTP tally failed: {}", e),
+    }
 
     // Summary
-    println!("\n6. Summary:");
+    println!("\n6. Architecture Comparison:");
     println!("   TCP API:");
-    println!("   + Real-time event streaming");
-    println!("   + Lower latency for frequent operations");
-    println!("   + Persistent connection");
-    println!("   - More complex connection management");
-    println!("   - Requires connection handling");
+    println!("   + Real-time event streaming and subscriptions");
+    println!("   + Fire-and-forget command sending (low latency)");
+    println!("   + Persistent connection with continuous data flow");
+    println!("   + Ideal for real-time applications (tally lights, live switching)");
+    println!("   - Requires connection state management");
+    println!("   - Event order not guaranteed to match command order");
 
     println!("\n   HTTP API:");
-    println!("   + Simple request/response model");
-    println!("   + Built-in timeout handling");
-    println!("   + No connection state management");
-    println!("   - No real-time events");
-    println!("   - Higher latency per request");
+    println!("   + Simple request/response model with guaranteed responses");
+    println!("   + Built-in error handling and timeout management");
+    println!("   + Stateless - no connection management needed");
+    println!("   + Ideal for control panels and configuration tools");
+    println!("   - No real-time event capabilities");
+    println!("   - Higher latency due to HTTP overhead");
 
     println!("\n✅ Comparison completed successfully!");
 
     // Gracefully disconnect TCP client
-    let _ = tcp_client.disconnect();
+    println!("\nDisconnecting TCP client...");
+    match tcp_client.disconnect() {
+        Ok(_) => println!("✅ TCP client disconnected cleanly"),
+        Err(e) => println!("❌ TCP disconnect error: {}", e),
+    }
 
     Ok(())
 }
