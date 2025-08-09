@@ -100,14 +100,23 @@ fn is_active(value: &str) -> bool {
 }
 
 // Higher-level helper functions for common patterns
-fn create_input_bool_variant(values: &[String], idx: usize) -> Result<ActivatorsData, anyhow::Error> {
+fn create_input_bool_variant(
+    values: &[String],
+    idx: usize,
+) -> Result<ActivatorsData, anyhow::Error> {
     if values.len() <= idx + 1 {
-        return Err(anyhow::anyhow!("Not enough values for input boolean variant"));
+        return Err(anyhow::anyhow!(
+            "Not enough values for input boolean variant"
+        ));
     }
-    
+
     let input_num = parse_input_number(&values[idx]);
-    let is_active_val = if values.len() > idx + 1 { is_active(&values[idx + 1]) } else { false };
-    
+    let is_active_val = if values.len() > idx + 1 {
+        is_active(&values[idx + 1])
+    } else {
+        false
+    };
+
     match values[0].as_str() {
         "Input" => Ok(ActivatorsData::Input(input_num, is_active_val)),
         "InputMix2" => Ok(ActivatorsData::InputMix2(input_num, is_active_val)),
@@ -160,14 +169,21 @@ fn create_input_bool_variant(values: &[String], idx: usize) -> Result<Activators
     }
 }
 
-fn create_input_float_variant(values: &[String], idx: usize) -> Result<ActivatorsData, anyhow::Error> {
+fn create_input_float_variant(
+    values: &[String],
+    idx: usize,
+) -> Result<ActivatorsData, anyhow::Error> {
     if values.len() <= idx + 1 {
         return Err(anyhow::anyhow!("Not enough values for input float variant"));
     }
-    
+
     let input_num = parse_input_number(&values[idx]);
-    let volume = if values.len() > idx + 1 { parse_float(&values[idx + 1]) } else { 0.0 };
-    
+    let volume = if values.len() > idx + 1 {
+        parse_float(&values[idx + 1])
+    } else {
+        0.0
+    };
+
     match values[0].as_str() {
         "InputVolume" => Ok(ActivatorsData::InputVolume(input_num, volume)),
         "InputHeadphones" => Ok(ActivatorsData::InputHeadphones(input_num, volume)),
@@ -175,13 +191,18 @@ fn create_input_float_variant(values: &[String], idx: usize) -> Result<Activator
     }
 }
 
-fn create_single_float_variant(values: &[String], idx: usize) -> Result<ActivatorsData, anyhow::Error> {
+fn create_single_float_variant(
+    values: &[String],
+    idx: usize,
+) -> Result<ActivatorsData, anyhow::Error> {
     if values.len() <= idx {
-        return Err(anyhow::anyhow!("Not enough values for single float variant"));
+        return Err(anyhow::anyhow!(
+            "Not enough values for single float variant"
+        ));
     }
-    
+
     let volume = parse_float(&values[idx]);
-    
+
     match values[0].as_str() {
         "MasterVolume" => Ok(ActivatorsData::MasterVolume(volume)),
         "MasterHeadphones" => Ok(ActivatorsData::MasterHeadphones(volume)),
@@ -196,13 +217,18 @@ fn create_single_float_variant(values: &[String], idx: usize) -> Result<Activato
     }
 }
 
-fn create_single_bool_variant(values: &[String], idx: usize) -> Result<ActivatorsData, anyhow::Error> {
+fn create_single_bool_variant(
+    values: &[String],
+    idx: usize,
+) -> Result<ActivatorsData, anyhow::Error> {
     if values.len() <= idx {
-        return Err(anyhow::anyhow!("Not enough values for single boolean variant"));
+        return Err(anyhow::anyhow!(
+            "Not enough values for single boolean variant"
+        ));
     }
-    
+
     let is_active_val = is_active(&values[idx]);
-    
+
     match values[0].as_str() {
         "MasterAudio" => Ok(ActivatorsData::MasterAudio(is_active_val)),
         "BusAAudio" => Ok(ActivatorsData::BusAAudio(is_active_val)),
@@ -237,44 +263,39 @@ impl TryFrom<&[String]> for ActivatorsData {
         }
 
         let activator_type = value[0].as_str();
-        
+
         // Group activators by their parameter patterns
         match activator_type {
             // Input with boolean (InputNumber, bool)
-            "Input" | "InputMix2" | "InputMix3" | "InputMix4" | "InputMix5" |
-            "InputMix6" | "InputMix7" | "InputMix8" | "InputMix9" | "InputMix10" |
-            "InputMix11" | "InputMix12" | "InputMix13" | "InputMix14" | "InputMix15" |
-            "InputMix16" | "InputPreview" | "InputPreviewMix2" | "InputPreviewMix3" |
-            "InputPreviewMix4" | "InputPreviewMix5" | "InputPreviewMix6" | "InputPreviewMix7" |
-            "InputPreviewMix8" | "InputPreviewMix9" | "InputPreviewMix10" | "InputPreviewMix11" |
-            "InputPreviewMix12" | "InputPreviewMix13" | "InputPreviewMix14" | "InputPreviewMix15" |
-            "InputPreviewMix16" | "InputPlaying" | "InputAudio" | "InputSolo" |
-            "InputBusAAudio" | "InputBusBAudio" | "InputBusCAudio" | "InputBusDAudio" |
-            "InputBusEAudio" | "InputBusFAudio" | "InputBusGAudio" | "InputMasterAudio" |
-            "Overlay1" | "Overlay2" | "Overlay3" | "Overlay4" => {
+            "Input" | "InputMix2" | "InputMix3" | "InputMix4" | "InputMix5" | "InputMix6"
+            | "InputMix7" | "InputMix8" | "InputMix9" | "InputMix10" | "InputMix11"
+            | "InputMix12" | "InputMix13" | "InputMix14" | "InputMix15" | "InputMix16"
+            | "InputPreview" | "InputPreviewMix2" | "InputPreviewMix3" | "InputPreviewMix4"
+            | "InputPreviewMix5" | "InputPreviewMix6" | "InputPreviewMix7" | "InputPreviewMix8"
+            | "InputPreviewMix9" | "InputPreviewMix10" | "InputPreviewMix11"
+            | "InputPreviewMix12" | "InputPreviewMix13" | "InputPreviewMix14"
+            | "InputPreviewMix15" | "InputPreviewMix16" | "InputPlaying" | "InputAudio"
+            | "InputSolo" | "InputBusAAudio" | "InputBusBAudio" | "InputBusCAudio"
+            | "InputBusDAudio" | "InputBusEAudio" | "InputBusFAudio" | "InputBusGAudio"
+            | "InputMasterAudio" | "Overlay1" | "Overlay2" | "Overlay3" | "Overlay4" => {
                 create_input_bool_variant(value, 1)
-            },
-            
+            }
+
             // Input with float (InputNumber, f32)
-            "InputVolume" | "InputHeadphones" => {
-                create_input_float_variant(value, 1)
-            },
-            
+            "InputVolume" | "InputHeadphones" => create_input_float_variant(value, 1),
+
             // Single float (f32)
-            "MasterVolume" | "MasterHeadphones" | "BusAVolume" | "BusBVolume" |
-            "BusCVolume" | "BusDVolume" | "BusEVolume" | "BusFVolume" | "BusGVolume" => {
+            "MasterVolume" | "MasterHeadphones" | "BusAVolume" | "BusBVolume" | "BusCVolume"
+            | "BusDVolume" | "BusEVolume" | "BusFVolume" | "BusGVolume" => {
                 create_single_float_variant(value, 1)
-            },
-            
+            }
+
             // Single boolean (bool)
-            "MasterAudio" | "BusAAudio" | "BusBAudio" | "BusCAudio" | "BusDAudio" |
-            "BusEAudio" | "BusFAudio" | "BusGAudio" | "BusASolo" | "BusBSolo" |
-            "BusCSolo" | "BusDSolo" | "BusESolo" | "BusFSolo" | "BusGSolo" |
-            "FadeToBlack" | "Recording" | "Streaming" | "External" | "Fullscreen" |
-            "ReplayPlaying" => {
-                create_single_bool_variant(value, 1)
-            },
-            
+            "MasterAudio" | "BusAAudio" | "BusBAudio" | "BusCAudio" | "BusDAudio" | "BusEAudio"
+            | "BusFAudio" | "BusGAudio" | "BusASolo" | "BusBSolo" | "BusCSolo" | "BusDSolo"
+            | "BusESolo" | "BusFSolo" | "BusGSolo" | "FadeToBlack" | "Recording" | "Streaming"
+            | "External" | "Fullscreen" | "ReplayPlaying" => create_single_bool_variant(value, 1),
+
             _ => {
                 println!("Unknown Activator: {:?}", value);
                 Err(anyhow::anyhow!("Unknown Activator"))

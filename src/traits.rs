@@ -1,0 +1,103 @@
+use crate::{
+    commands::{InputNumber, RecvCommand, TallyData},
+    models::Vmix,
+};
+use anyhow::Result;
+use async_trait::async_trait;
+use std::collections::HashMap;
+
+/// Unified trait interface for both TCP and HTTP vMix API clients
+///
+/// This trait provides a consistent API regardless of the underlying
+/// communication protocol (TCP or HTTP).
+#[async_trait(?Send)]
+pub trait VmixApiClient {
+    /// Execute a vMix function with optional parameters
+    ///
+    /// # Arguments
+    /// * `function` - The vMix function name (e.g., "Cut", "Fade", "PreviewInput")
+    /// * `params` - Function parameters as key-value pairs
+    ///
+    /// # Example
+    /// ```rust,ignore
+    /// use std::collections::HashMap;
+    /// 
+    /// let mut params = HashMap::new();
+    /// params.insert("Input".to_string(), "1".to_string());
+    /// params.insert("Duration".to_string(), "1000".to_string());
+    /// client.execute_function("Fade", &params).await?;
+    /// ```
+    async fn execute_function(
+        &self,
+        function: &str,
+        params: &HashMap<String, String>,
+    ) -> Result<()>;
+
+    /// Get the complete vMix XML state
+    ///
+    /// Returns a structured representation of the current vMix configuration
+    /// including inputs, overlays, transitions, and system state.
+    async fn get_xml_state(&self) -> Result<Vmix>;
+
+    /// Get tally data for all inputs
+    ///
+    /// Returns a mapping of input numbers to their tally states (OFF, PROGRAM, PREVIEW).
+    /// This is useful for lighting systems and input status displays.
+    async fn get_tally_data(&self) -> Result<HashMap<InputNumber, TallyData>>;
+
+    /// Check if the client is connected and the vMix instance is responsive
+    async fn is_connected(&self) -> bool;
+
+    /// Get the currently active (program) input number
+    async fn get_active_input(&self) -> Result<InputNumber>;
+
+    /// Get the currently previewed input number
+    async fn get_preview_input(&self) -> Result<InputNumber>;
+}
+
+/// Extended trait for TCP-specific functionality
+///
+/// TCP clients can provide real-time event streaming and subscription
+/// capabilities that are not available via HTTP.
+#[async_trait(?Send)]
+pub trait VmixTcpApiClient: VmixApiClient {
+    /// Try to receive a command from the TCP stream (non-blocking)
+    ///
+    /// This method returns immediately and provides access to real-time
+    /// events from vMix such as tally updates, activator changes, etc.
+    fn try_receive_command(&self, timeout: std::time::Duration) -> Result<RecvCommand>;
+
+    /// Get a sender for sending commands to the TCP connection
+    ///
+    /// This provides access to the underlying command sender for advanced
+    /// use cases that need direct control over the TCP communication.
+    fn get_sender(&self) -> &std::sync::mpsc::SyncSender<crate::commands::SendCommand>;
+}
+
+/// Factory trait for creating vMix API clients
+///
+/// This trait allows for easy creation of different client types
+/// with consistent configuration parameters.
+pub trait VmixClientFactory {
+    type TcpClient: VmixTcpApiClient + Send + Sync;
+    type HttpClient: VmixApiClient + Send + Sync;
+
+    /// Create a new TCP client
+    async fn create_tcp_client(
+        addr: std::net::SocketAddr,
+        timeout: std::time::Duration,
+    ) -> Result<Self::TcpClient>;
+
+    /// Create a new HTTP client
+    fn create_http_client(
+        addr: std::net::SocketAddr,
+        timeout: std::time::Duration,
+    ) -> Self::HttpClient;
+
+    /// Create HTTP client with separate host and port
+    fn create_http_client_with_host_port(
+        host: &str,
+        port: u16,
+        timeout: std::time::Duration,
+    ) -> Self::HttpClient;
+}
