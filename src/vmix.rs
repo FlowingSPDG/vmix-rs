@@ -28,6 +28,11 @@ pub struct VmixApi {
     writer_handle: Option<JoinHandle<()>>,
 }
 
+// VmixApiはマルチスレッド環境で安全に使用できる
+// 内部でMutexやAtomicBoolを使用しているため
+unsafe impl Send for VmixApi {}
+unsafe impl Sync for VmixApi {}
+
 impl Drop for VmixApi {
     fn drop(&mut self) {
         // Signal all threads to shutdown
@@ -221,7 +226,7 @@ impl VmixApi {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl VmixApiClient for VmixApi {
     async fn execute_function(
         &self,
@@ -286,7 +291,7 @@ impl VmixApiClient for VmixApi {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl VmixTcpApiClient for VmixApi {
     fn try_receive_command(&self, timeout: Duration) -> Result<RecvCommand> {
         self.try_receive_command(timeout)

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 ///
 /// This trait provides a consistent API regardless of the underlying
 /// communication protocol (TCP or HTTP).
-#[async_trait(?Send)]
+#[async_trait]
 pub trait VmixApiClient {
     /// Execute a vMix function with optional parameters
     ///
@@ -59,7 +59,7 @@ pub trait VmixApiClient {
 ///
 /// TCP clients can provide real-time event streaming and subscription
 /// capabilities that are not available via HTTP.
-#[async_trait(?Send)]
+#[async_trait]
 pub trait VmixTcpApiClient: VmixApiClient {
     /// Try to receive a command from the TCP stream (non-blocking)
     ///
