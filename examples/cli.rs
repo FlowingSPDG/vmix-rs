@@ -183,6 +183,10 @@ Type commands and press Enter, or Ctrl+C to exit:\n");
         },
         _ = tokio::signal::ctrl_c() => {
             println!("\n🛑 Received Ctrl+C, shutting down gracefully...");
+            
+            // Force abort all tasks to ensure quick shutdown
+            println!("🔄 Application shutting down...");
+            std::process::exit(0);
         },
     }
 

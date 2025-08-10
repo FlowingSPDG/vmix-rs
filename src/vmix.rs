@@ -78,7 +78,7 @@ impl VmixApi {
             .map_err(|e| anyhow::anyhow!("Failed to set write timeout: {}", e))?;
 
         // Create stream clones for reader and writer
-        let reader_stream = stream
+        let mut reader_stream = stream
             .try_clone()
             .map_err(|e| anyhow::anyhow!("Failed to clone stream for reader: {}", e))?;
         
@@ -110,7 +110,7 @@ impl VmixApi {
 
                 // Try to read from stream with timeout handling
                 // Note: This may still block, but the stream will be closed from Drop impl
-                match (&reader_stream).try_into() {
+                match (&mut reader_stream).try_into() {
                     Ok(command) => {
                         if reader_sender.send(command).is_err() {
                             // Receiver dropped, exit thread

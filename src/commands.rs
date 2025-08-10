@@ -3,7 +3,7 @@ use crate::commands::Status::Length;
 use std::{
     collections::HashMap,
     fmt::{self, Display},
-    io::{BufRead, BufReader, Read},
+    io::Read,
     net::TcpStream,
 };
 
@@ -194,23 +194,29 @@ impl Display for SUBSCRIBECommand {
     }
 }
 
-impl TryFrom<&TcpStream> for RecvCommand {
+impl TryFrom<&mut TcpStream> for RecvCommand {
     type Error = anyhow::Error;
 
-    fn try_from(stream: &TcpStream) -> Result<Self, Self::Error> {
-        let mut stream = BufReader::new(stream);
-
-        // read stream
+    fn try_from(stream: &mut TcpStream) -> Result<Self, Self::Error> {
+        // Read directly from TcpStream to avoid BufReader buffering issues
         let mut value = String::new();
-
-        // start reading buffer
-        // no data found
-        if stream.read_line(&mut value)? == 0 {
-            return Err(anyhow::anyhow!(std::io::ErrorKind::ConnectionAborted));
-        };
-
-        // println!("DEBUG RECEIVED LINE: {:?}", value);
-
+        let mut buffer = [0u8; 1];
+        
+        // Read byte by byte until we hit \n
+        loop {
+            let bytes_read = stream.read(&mut buffer)?;
+            if bytes_read == 0 {
+                return Err(anyhow::anyhow!(std::io::ErrorKind::ConnectionAborted));
+            }
+            
+            let ch = buffer[0] as char;
+            value.push(ch);
+            
+            if ch == '\n' {
+                break;
+            }
+        }
+        
         // remove \r\n
         let value = value.lines().collect::<String>();
 
@@ -263,13 +269,11 @@ impl TryFrom<&TcpStream> for RecvCommand {
             */
             "XML" => {
                 if let Length(len) = &status {
-                    let mut took = stream.take(len.to_owned());
-                    let mut xml = String::new();
-                    took.read_to_string(&mut xml)?;
-
-                    // remove \r\n
-                    let xml = xml.lines().collect::<String>();
-
+                    // Read exact number of bytes directly from stream
+                    let mut xml_buffer = vec![0u8; *len as usize];
+                    stream.read_exact(&mut xml_buffer)?;
+                    let xml = String::from_utf8(xml_buffer)?.trim_end().to_string();
+                    
                     return Ok(Self::XML(XMLResponse { status, body: xml }));
                 }
                 Err(anyhow::anyhow!("Failed to read XML"))
@@ -282,7 +286,7 @@ impl TryFrom<&TcpStream> for RecvCommand {
                 status,
                 version: body,
             })),
-            _ => Err(anyhow::anyhow!("No matching command found")),
+            _ => Err(anyhow::anyhow!("No matching command found: {:?}", command)),
         }
     }
 }
