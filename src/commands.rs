@@ -263,9 +263,9 @@ impl TryFrom<&TcpStream> for RecvCommand {
             */
             "XML" => {
                 if let Length(len) = &status {
-                    let mut took = stream.take(len.to_owned());
-                    let mut xml = String::new();
-                    took.read_to_string(&mut xml)?;
+                    let mut xml_buffer = vec![0u8; *len as usize];
+                    stream.read_exact(&mut xml_buffer)?;
+                    let xml = String::from_utf8(xml_buffer)?;
 
                     // remove \r\n
                     let xml = xml.lines().collect::<String>();
