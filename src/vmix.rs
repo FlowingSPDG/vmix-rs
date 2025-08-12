@@ -174,13 +174,6 @@ impl VmixApi {
                                 }
                             }
                         } else {
-                            // Check if this is a connection-related error message
-                            let error_msg = err.to_string();
-                            if error_msg.contains("connection aborted") {
-                                eprintln!("Connection closed: {}", err);
-                                reader_error.store(true, Ordering::Relaxed);
-                                break;
-                            }
                             eprintln!("Failed to parse incoming packet: {}", err);
                             continue;
                         }

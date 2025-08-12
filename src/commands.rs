@@ -207,7 +207,7 @@ impl TryFrom<&mut TcpStream> for RecvCommand {
         loop {
             let bytes_read = stream.read(&mut buffer)?;
             if bytes_read == 0 {
-                return Err(anyhow::anyhow!("connection aborted"));
+                return Err(anyhow::anyhow!(std::io::Error::new(std::io::ErrorKind::ConnectionAborted, "connection aborted")));
             }
             
             let ch = buffer[0] as char;
@@ -280,7 +280,7 @@ impl TryFrom<&mut TcpStream> for RecvCommand {
                         match stream.read(&mut xml_buffer[bytes_read..]) {
                             Ok(0) => {
                                 // EOF reached before reading all expected bytes
-                                return Err(anyhow::anyhow!("connection aborted"));
+                                return Err(anyhow::anyhow!(std::io::Error::new(std::io::ErrorKind::ConnectionAborted, "connection aborted")));
                             }
                             Ok(n) => {
                                 bytes_read += n;
@@ -297,7 +297,7 @@ impl TryFrom<&mut TcpStream> for RecvCommand {
                                 std::io::ErrorKind::ConnectionAborted
                                 | std::io::ErrorKind::ConnectionReset
                                 | std::io::ErrorKind::UnexpectedEof => {
-                                    return Err(anyhow::anyhow!("connection aborted"));
+                                    return Err(anyhow::anyhow!(e));
                                 }
                                 _ => return Err(anyhow::anyhow!(e)),
                             }
