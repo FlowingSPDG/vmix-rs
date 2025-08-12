@@ -5,6 +5,7 @@ use std::{
     fmt::{self, Display},
     io::Read,
     net::TcpStream,
+    time::Duration,
 };
 
 pub type InputNumber = u16; // 0~1000
@@ -206,7 +207,7 @@ impl TryFrom<&mut TcpStream> for RecvCommand {
         loop {
             let bytes_read = stream.read(&mut buffer)?;
             if bytes_read == 0 {
-                return Err(anyhow::anyhow!(std::io::ErrorKind::ConnectionAborted));
+                return Err(anyhow::anyhow!(std::io::Error::new(std::io::ErrorKind::ConnectionAborted, "connection aborted")));
             }
             
             let ch = buffer[0] as char;
@@ -269,11 +270,41 @@ impl TryFrom<&mut TcpStream> for RecvCommand {
             */
             "XML" => {
                 if let Length(len) = &status {
-                    // Read exact number of bytes directly from stream
+                    // Read exact number of bytes with timeout handling
                     let mut xml_buffer = vec![0u8; *len as usize];
-                    stream.read_exact(&mut xml_buffer)?;
-                    let xml = String::from_utf8(xml_buffer)?.trim_end().to_string();
+                    let mut bytes_read = 0;
+                    let start_time = std::time::Instant::now();
+                    let read_timeout = Duration::from_secs(5); // 5 second timeout for XML reads
                     
+                    while bytes_read < xml_buffer.len() {
+                        match stream.read(&mut xml_buffer[bytes_read..]) {
+                            Ok(0) => {
+                                // EOF reached before reading all expected bytes
+                                return Err(anyhow::anyhow!(std::io::Error::new(std::io::ErrorKind::ConnectionAborted, "connection aborted")));
+                            }
+                            Ok(n) => {
+                                bytes_read += n;
+                            }
+                            Err(e) => match e.kind() {
+                                std::io::ErrorKind::WouldBlock => {
+                                    // Non-blocking read would block, check timeout
+                                    if start_time.elapsed() > read_timeout {
+                                        return Err(anyhow::anyhow!("XML read timeout"));
+                                    }
+                                    std::thread::sleep(Duration::from_millis(1));
+                                    continue;
+                                }
+                                std::io::ErrorKind::ConnectionAborted
+                                | std::io::ErrorKind::ConnectionReset
+                                | std::io::ErrorKind::UnexpectedEof => {
+                                    return Err(anyhow::anyhow!(e));
+                                }
+                                _ => return Err(anyhow::anyhow!(e)),
+                            }
+                        }
+                    }
+                    
+                    let xml = String::from_utf8(xml_buffer)?.trim_end().to_string();
                     return Ok(Self::XML(XMLResponse { status, body: xml }));
                 }
                 Err(anyhow::anyhow!("Failed to read XML"))

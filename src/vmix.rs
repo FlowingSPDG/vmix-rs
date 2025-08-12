@@ -33,10 +33,11 @@ unsafe impl Sync for VmixApi {}
 impl Drop for VmixApi {
     fn drop(&mut self) {
         // Signal all threads to shutdown immediately
-        self.shutdown_signal.store(true, Ordering::Relaxed);
-        self.error_signal.store(true, Ordering::Relaxed);
+        self.shutdown_signal.store(true, Ordering::SeqCst);
+        self.error_signal.store(true, Ordering::SeqCst);
         
         // Explicitly close the original stream to force both reader and writer to exit
+        // This will cause any blocking reads/writes to return with an error
         if let Ok(mut stream_guard) = self.original_stream.lock() {
             if let Some(stream) = stream_guard.take() {
                 let _ = stream.shutdown(std::net::Shutdown::Both);
@@ -46,18 +47,46 @@ impl Drop for VmixApi {
         // Send a final message to wake up the writer thread if it's waiting
         let _ = self.sender.try_send(SendCommand::QUIT);
 
-        // Wait for threads to complete with a reasonable timeout
+        // Wait for threads to complete with timeout
+        let shutdown_timeout = Duration::from_millis(500);
+        
+        // Join reader thread with timeout
         if let Some(handle) = self.reader_handle.take() {
-            // Give the reader thread a moment to notice the shutdown signal
-            std::thread::sleep(Duration::from_millis(50));
-            if let Err(_) = handle.join() {
-                eprintln!("Warning: Reader thread did not shut down cleanly");
+            // Give the reader thread a brief moment to notice the shutdown signal
+            std::thread::sleep(Duration::from_millis(10));
+            
+            // Simple timeout: try to join, but don't wait forever
+            let start_time = std::time::Instant::now();
+            loop {
+                if handle.is_finished() {
+                    if handle.join().is_err() {
+                        eprintln!("Warning: Reader thread panicked during shutdown");
+                    }
+                    break;
+                }
+                if start_time.elapsed() > shutdown_timeout {
+                    eprintln!("Warning: Reader thread did not shut down within timeout");
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(10));
             }
         }
+        
+        // Join writer thread with timeout  
         if let Some(handle) = self.writer_handle.take() {
-            // Writer should shutdown quickly due to 10ms timeout
-            if let Err(_) = handle.join() {
-                eprintln!("Warning: Writer thread did not shut down cleanly");
+            let start_time = std::time::Instant::now();
+            loop {
+                if handle.is_finished() {
+                    if handle.join().is_err() {
+                        eprintln!("Warning: Writer thread panicked during shutdown");
+                    }
+                    break;
+                }
+                if start_time.elapsed() > shutdown_timeout {
+                    eprintln!("Warning: Writer thread did not shut down within timeout");
+                    break;
+                }
+                std::thread::sleep(Duration::from_millis(10));
             }
         }
     }
@@ -238,7 +267,49 @@ impl VmixApi {
 
     /// Check if the connection is still alive
     pub fn is_connected(&self) -> bool {
-        !self.shutdown_signal.load(Ordering::Relaxed) && !self.error_signal.load(Ordering::Relaxed)
+        // First check atomic flags for immediate shutdown/error detection
+        if self.shutdown_signal.load(Ordering::Relaxed) || self.error_signal.load(Ordering::Relaxed) {
+            return false;
+        }
+        
+        // Perform lightweight socket health check
+        if let Ok(stream_guard) = self.original_stream.try_lock() {
+            if let Some(stream) = stream_guard.as_ref() {
+                // Try to peek at the socket to check if it's still connected
+                // This is non-intrusive and won't interfere with reader/writer threads
+                let mut buf = [0u8; 1];
+                match stream.peek(&mut buf) {
+                    Ok(_) => {
+                        // Successfully peeked, connection appears healthy
+                        true
+                    }
+                    Err(e) => match e.kind() {
+                        std::io::ErrorKind::WouldBlock => {
+                            // No data available to peek, but connection is fine
+                            true
+                        }
+                        std::io::ErrorKind::ConnectionAborted
+                        | std::io::ErrorKind::ConnectionReset
+                        | std::io::ErrorKind::UnexpectedEof 
+                        | std::io::ErrorKind::NotConnected => {
+                            // Connection is definitely closed
+                            false
+                        }
+                        _ => {
+                            // Other errors - assume still connected to avoid false negatives
+                            true
+                        }
+                    }
+                }
+            } else {
+                // Stream has been taken (during shutdown)
+                false
+            }
+        } else {
+            // Couldn't acquire lock immediately, assume connected to avoid blocking
+            // This preserves the non-blocking nature of this method
+            true
+        }
     }
 }
 
