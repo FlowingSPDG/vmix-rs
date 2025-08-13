@@ -28,6 +28,31 @@ async fn main() -> Result<()> {
             println!("✅ Active Input: {}", state.active);
             println!("✅ Preview Input: {}", state.preview);
             println!("✅ Total Inputs: {}", state.inputs.input.len());
+            
+            // Test VideoList item parsing
+            println!("\nTesting VideoList item parsing...");
+            let video_list_inputs: Vec<_> = state.inputs.input.iter()
+                .filter(|input| input.input_type == "VideoList")
+                .collect();
+            
+            if video_list_inputs.is_empty() {
+                println!("⚠️  No VideoList inputs found in vMix");
+            } else {
+                println!("✅ Found {} VideoList input(s)", video_list_inputs.len());
+                
+                for input in video_list_inputs.iter().take(2) {
+                    println!("   VideoList '{}' (Input {})", input.title, input.number);
+                    if let Some(list) = &input.list {
+                        println!("     List has {} items", list.item.len());
+                        for (i, item) in list.item.iter().take(3).enumerate() {
+                            println!("       Item {}: enabled={:?}, selected={:?}, text={:?}", 
+                                i, item.enabled, item.selected, item.text);
+                        }
+                    } else {
+                        println!("     No list data found");
+                    }
+                }
+            }
         }
         Err(e) => println!("❌ Failed to get vMix state: {}", e),
     }
