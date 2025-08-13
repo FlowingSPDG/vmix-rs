@@ -196,10 +196,10 @@ pub struct Image {
     // text: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct List {
-    // #[serde(rename = "item")]
-    // item: Vec<ItemElement>,
+    #[serde(rename = "item", default)]
+    pub item: Vec<ListItem>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -321,12 +321,14 @@ pub struct Transition {
     duration: String,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum ItemElement {
-    ItemClass(ItemClass),
-
-    String(String),
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct ListItem {
+    #[serde(rename = "@enabled", default)]
+    pub enabled: Option<String>,
+    #[serde(rename = "@selected", default)]
+    pub selected: Option<String>,
+    #[serde(rename = "$text", default)]
+    pub text: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
