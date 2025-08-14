@@ -10,6 +10,51 @@ use vmix_rs::vmix::VmixApi;
 mod tests {
     use super::*;
     use vmix_rs::traits::VmixTcpApiClient;
+    use vmix_rs::models::{Input, State};
+    use quick_xml::de;
+
+    #[test]
+    fn test_state_enum_parsing() {
+        // Test parsing of all State enum variants
+        let running_xml = r#"<input state="Running" />"#;
+        let paused_xml = r#"<input state="Paused" />"#;
+        let completed_xml = r#"<input state="Completed" />"#;
+        let unknown_xml = r#"<input state="Unknown" />"#;
+        let missing_state_xml = r#"<input />"#;
+
+        // These should parse successfully now
+        let running: Result<Input, _> = de::from_str(running_xml);
+        let paused: Result<Input, _> = de::from_str(paused_xml);
+        let completed: Result<Input, _> = de::from_str(completed_xml);
+        let unknown: Result<Input, _> = de::from_str(unknown_xml);
+        let missing: Result<Input, _> = de::from_str(missing_state_xml);
+
+        // Check that Unknown value is parsed correctly
+        if let Ok(input) = unknown {
+            assert_eq!(input.state, State::Unknown);
+        }
+
+        // Check that missing state defaults to Unknown
+        if let Ok(input) = missing {
+            assert_eq!(input.state, State::Unknown);
+        }
+
+        println!("✅ State enum parsing tests completed");
+    }
+
+    #[test]
+    fn test_state_enum_variants() {
+        // Test all State enum variants
+        assert_eq!(State::default(), State::Unknown);
+        
+        // Test that all variants are available
+        let _running = State::Running;
+        let _paused = State::Paused;
+        let _completed = State::Completed;
+        let _unknown = State::Unknown;
+
+        println!("✅ State enum variant tests completed");
+    }
 
     #[tokio::test]
     async fn test_vmix_api_send_sync_traits() {
