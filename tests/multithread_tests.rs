@@ -10,51 +10,76 @@ use vmix_rs::vmix::VmixApi;
 mod tests {
     use super::*;
     use vmix_rs::traits::VmixTcpApiClient;
-    use vmix_rs::models::{Input, State};
+    use vmix_rs::models::{Vmix, Input, State};
     use quick_xml::de;
 
     #[test]
-    fn test_state_enum_parsing() {
-        // Test parsing of all State enum variants
-        let running_xml = r#"<input state="Running" />"#;
-        let paused_xml = r#"<input state="Paused" />"#;
-        let completed_xml = r#"<input state="Completed" />"#;
-        let unknown_xml = r#"<input state="Unknown" />"#;
-        let missing_state_xml = r#"<input />"#;
-
-        // These should parse successfully now
-        let running: Result<Input, _> = de::from_str(running_xml);
-        let paused: Result<Input, _> = de::from_str(paused_xml);
-        let completed: Result<Input, _> = de::from_str(completed_xml);
-        let unknown: Result<Input, _> = de::from_str(unknown_xml);
-        let missing: Result<Input, _> = de::from_str(missing_state_xml);
-
-        // Check that Unknown value is parsed correctly
-        if let Ok(input) = unknown {
-            assert_eq!(input.state, State::Unknown);
-        }
-
-        // Check that missing state defaults to Unknown
-        if let Ok(input) = missing {
-            assert_eq!(input.state, State::Unknown);
-        }
-
-        println!("✅ State enum parsing tests completed");
-    }
-
-    #[test]
-    fn test_state_enum_variants() {
-        // Test all State enum variants
-        assert_eq!(State::default(), State::Unknown);
+    fn test_actual_vmix_xml_parsing() {
+        // Test with actual vMix XML from http://192.168.160.54:8088/api
+        let actual_input_running = r#"<input key="f9bc0129-670f-440c-8ef4-fbf7173dfbda" number="3" type="Capture" title="CAMSWer" shortTitle="CAMSWer" state="Running" position="0" duration="0" loop="False" muted="True" volume="100" balance="0" solo="False" soloPFL="False" audiobusses="M" meterF1="0" meterF2="0" gainDb="0">CAMSWer</input>"#;
         
-        // Test that all variants are available
-        let _running = State::Running;
-        let _paused = State::Paused;
-        let _completed = State::Completed;
-        let _unknown = State::Unknown;
+        let actual_input_paused = r#"<input key="f7bf0353-adfc-4087-abd6-47a121b54016" number="1" type="Replay" title="20250814_STAGE0 - A" shortTitle="20250814_STAGE0" state="Paused" position="8296889" duration="8296972" loop="True" muted="False" volume="100" balance="0" solo="False" soloPFL="False" audiobusses="M" meterF1="0" meterF2="0" gainDb="0">20250814_STAGE0 - A</input>"#;
 
-        println!("✅ State enum variant tests completed");
+        // Test parsing
+        let running_result: Result<Input, _> = de::from_str(actual_input_running);
+        let paused_result: Result<Input, _> = de::from_str(actual_input_paused);
+
+        match running_result {
+            Ok(input) => {
+                assert_eq!(input.state, State::Running);
+                println!("✅ Running state parsed correctly: {:?}", input.state);
+            }
+            Err(e) => {
+                println!("❌ Failed to parse Running state: {}", e);
+                panic!("Running state parsing failed");
+            }
+        }
+
+        match paused_result {
+            Ok(input) => {
+                assert_eq!(input.state, State::Paused);
+                println!("✅ Paused state parsed correctly: {:?}", input.state);
+            }
+            Err(e) => {
+                println!("❌ Failed to parse Paused state: {}", e);
+                panic!("Paused state parsing failed");
+            }
+        }
     }
+
+    #[tokio::test]
+    async fn test_actual_vmix_xml_full_parsing() {
+        // Test if we can fetch and parse the actual XML
+        let xml_result = reqwest::get("http://192.168.160.54:8088/api").await;
+        
+        if let Ok(response) = xml_result {
+            if let Ok(xml_text) = response.text().await {
+                println!("Fetched XML from actual vMix instance");
+                
+                let vmix_result: Result<Vmix, _> = de::from_str(&xml_text);
+                match vmix_result {
+                    Ok(vmix_data) => {
+                        println!("✅ Successfully parsed actual vMix XML");
+                        println!("Total inputs: {}", vmix_data.inputs.input.len());
+                        
+                        for input in &vmix_data.inputs.input {
+                            println!("Input {}: {} - state: {:?}", 
+                                input.number, input.title, input.state);
+                        }
+                    }
+                    Err(e) => {
+                        println!("❌ Failed to parse actual vMix XML: {}", e);
+                        println!("XML content (first 500 chars): {}", &xml_text[..500.min(xml_text.len())]);
+                        panic!("Actual XML parsing failed");
+                    }
+                }
+            }
+        } else {
+            println!("⚠️ Could not connect to vMix instance at 192.168.160.54:8088");
+        }
+    }
+
+
 
     #[tokio::test]
     async fn test_vmix_api_send_sync_traits() {

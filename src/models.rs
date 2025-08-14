@@ -141,7 +141,7 @@ pub struct Input {
     #[serde(rename = "@shortTitle")]
     pub short_title: String,
 
-    #[serde(rename = "@state", default)]
+    #[serde(rename = "@state")]
     pub state: State,
 
     #[serde(rename = "@position")]
@@ -385,13 +385,4 @@ pub enum State {
 
     #[serde(rename = "Completed")]
     Completed,
-
-    #[serde(rename = "Unknown")]
-    Unknown,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        State::Unknown
-    }
 }
