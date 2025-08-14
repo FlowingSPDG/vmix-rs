@@ -58,24 +58,36 @@ pub struct Vmix {
 pub struct Audio {
     #[serde(rename = "master")]
     master: Master,
+
+    #[serde(rename = "busA")]
+    bus_a: Master,
+
+    #[serde(rename = "busB")]
+    bus_b: Master,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Master {
-    #[serde(rename = "volume")]
+    #[serde(rename = "@volume")]
     volume: String,
 
-    #[serde(rename = "muted")]
+    #[serde(rename = "@muted")]
     muted: Boolean,
 
-    #[serde(rename = "meterF1")]
+    #[serde(rename = "@meterF1")]
     meter_f1: String,
 
-    #[serde(rename = "meterF2")]
+    #[serde(rename = "@meterF2")]
     meter_f2: String,
 
-    #[serde(rename = "headphonesVolume")]
-    headphones_volume: String,
+    #[serde(rename = "@headphonesVolume", default)]
+    headphones_volume: Option<String>,
+
+    #[serde(rename = "@solo", default)]
+    solo: Option<Boolean>,
+
+    #[serde(rename = "@sendToMaster", default)]
+    send_to_master: Option<Boolean>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -113,76 +125,77 @@ pub struct Inputs {
 
 #[derive(Serialize, Deserialize)]
 pub struct Input {
-    // #[serde(rename = "overlay")]
-    // overlay: Option<OverlayUnion>,
-    #[serde(rename = "key")]
+    // 属性
+    #[serde(rename = "@key")]
     pub key: String,
 
-    #[serde(rename = "number")]
+    #[serde(rename = "@number")]
     pub number: String,
 
-    #[serde(rename = "type")]
+    #[serde(rename = "@type")]
     pub input_type: String,
 
-    #[serde(rename = "title")]
+    #[serde(rename = "@title")]
     pub title: String,
 
-    #[serde(rename = "shortTitle")]
+    #[serde(rename = "@shortTitle")]
     pub short_title: String,
 
-    #[serde(rename = "state")]
+    #[serde(rename = "@state")]
     pub state: State,
 
-    #[serde(rename = "position")]
+    #[serde(rename = "@position")]
     pub position: String,
 
-    #[serde(rename = "duration")]
+    #[serde(rename = "@duration")]
     pub duration: String,
 
-    #[serde(rename = "loop")]
+    #[serde(rename = "@loop")]
     pub input_loop: Boolean,
 
-    //#[serde(rename = "text")]
-    //text: String,
-    #[serde(rename = "muted")]
+    #[serde(rename = "@muted", default)]
     pub muted: Option<Boolean>,
 
-    #[serde(rename = "volume")]
+    #[serde(rename = "@volume", default)]
     pub volume: Option<String>,
 
-    #[serde(rename = "balance")]
+    #[serde(rename = "@balance", default)]
     pub balance: Option<String>,
 
-    #[serde(rename = "solo")]
+    #[serde(rename = "@solo", default)]
     pub solo: Option<Boolean>,
 
-    // TODO: "M,A"のようなカンマ区切りのパターンも網羅する
-    /*
-    #[serde(rename = "audiobusses")]
-    pub audiobusses: Option<Audiobusses>,
-     */
-    #[serde(rename = "meterF1")]
+    #[serde(rename = "@soloPFL", default)]
+    pub solo_pfl: Option<Boolean>,
+
+    #[serde(rename = "@audiobusses", default)]
+    pub audiobusses: Option<String>,
+
+    #[serde(rename = "@meterF1", default)]
     pub meter_f1: Option<String>,
 
-    #[serde(rename = "meterF2")]
+    #[serde(rename = "@meterF2", default)]
     pub meter_f2: Option<String>,
 
-    #[serde(rename = "gainDb")]
+    #[serde(rename = "@gainDb", default)]
     pub gain_db: Option<String>,
 
-    #[serde(rename = "list")]
+    // 子要素
+    #[serde(rename = "list", default)]
     pub list: Option<List>,
 
-    #[serde(rename = "selectedIndex")]
+    #[serde(rename = "selectedIndex", default)]
     pub selected_index: Option<String>,
 
-    // #[serde(rename = "text")]
-    // input_text: Option<Vec<Image>>,
-    #[serde(rename = "image")]
+    #[serde(rename = "image", default)]
     pub image: Option<Image>,
 
-    #[serde(rename = "replay")]
+    #[serde(rename = "replay", default)]
     pub replay: Option<Replay>,
+
+    // テキストコンテンツ（要素の中身）
+    #[serde(rename = "$value", default)]
+    pub text_content: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -248,47 +261,49 @@ pub struct FluffyOverlay {
 
 #[derive(Serialize, Deserialize)]
 pub struct Replay {
-    #[serde(rename = "timecode")]
-    timecode: String,
+    // 子要素
+    #[serde(rename = "timecode", default)]
+    pub timecode: String,
 
-    #[serde(rename = "timecodeA")]
-    timecode_a: String,
+    #[serde(rename = "timecodeA", default)]
+    pub timecode_a: String,
 
-    #[serde(rename = "timecodeB")]
-    timecode_b: String,
+    #[serde(rename = "timecodeB", default)]
+    pub timecode_b: String,
 
-    #[serde(rename = "live")]
-    live: Boolean,
+    // 属性
+    #[serde(rename = "@live", default)]
+    pub live: Option<String>,
 
-    #[serde(rename = "recording")]
-    recording: Boolean,
+    #[serde(rename = "@recording", default)]
+    pub recording: Option<String>,
 
-    #[serde(rename = "channelMode")]
-    channel_mode: String,
+    #[serde(rename = "@channelMode", default)]
+    pub channel_mode: String,
 
-    #[serde(rename = "events")]
-    events: String,
+    #[serde(rename = "@events", default)]
+    pub events: String,
 
-    #[serde(rename = "eventsA")]
-    events_a: String,
+    #[serde(rename = "@eventsA", default)]
+    pub events_a: String,
 
-    #[serde(rename = "eventsB")]
-    events_b: String,
+    #[serde(rename = "@eventsB", default)]
+    pub events_b: String,
 
-    #[serde(rename = "cameraA")]
-    camera_a: String,
+    #[serde(rename = "@cameraA", default)]
+    pub camera_a: String,
 
-    #[serde(rename = "cameraB")]
-    camera_b: String,
+    #[serde(rename = "@cameraB", default)]
+    pub camera_b: String,
 
-    #[serde(rename = "speed")]
-    speed: String,
+    #[serde(rename = "@speed", default)]
+    pub speed: String,
 
-    #[serde(rename = "speedA")]
-    speed_a: String,
+    #[serde(rename = "@speedA", default)]
+    pub speed_a: String,
 
-    #[serde(rename = "speedB")]
-    speed_b: String,
+    #[serde(rename = "@speedB", default)]
+    pub speed_b: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -299,7 +314,7 @@ pub struct Overlays {
 
 #[derive(Serialize, Deserialize)]
 pub struct OverlaysOverlay {
-    #[serde(rename = "number")]
+    #[serde(rename = "@number")]
     number: String,
 }
 
@@ -311,13 +326,13 @@ pub struct Transitions {
 
 #[derive(Serialize, Deserialize)]
 pub struct Transition {
-    #[serde(rename = "number")]
+    #[serde(rename = "@number")]
     number: String,
 
-    #[serde(rename = "effect")]
+    #[serde(rename = "@effect")]
     effect: String,
 
-    #[serde(rename = "duration")]
+    #[serde(rename = "@duration")]
     duration: String,
 }
 
