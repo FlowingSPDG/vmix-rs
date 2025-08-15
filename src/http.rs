@@ -6,7 +6,7 @@ use crate::{
 use anyhow::Result;
 use async_trait::async_trait;
 use reqwest::Client;
-use serde_xml_rs as xml;
+use quick_xml::de;
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
 
 #[derive(Debug, Clone)]
@@ -71,7 +71,7 @@ impl HttpVmixClient {
         let response = self.client.get(&self.base_url).send().await?;
 
         let xml_text = response.text().await?;
-        let vmix_data: Vmix = xml::from_str(&xml_text)?;
+        let vmix_data: Vmix = de::from_str(&xml_text)?;
         Ok(vmix_data)
     }
 
