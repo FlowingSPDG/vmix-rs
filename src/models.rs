@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Vmix {
     #[serde(rename = "version")]
     pub version: String,
@@ -26,29 +26,29 @@ pub struct Vmix {
     #[serde(rename = "active")]
     pub active: String,
 
-    #[serde(rename = "fadeToBlack")]
-    pub fade_to_black: Boolean,
+    #[serde(rename = "fadeToBlack", with = "xml_bool")]
+    pub fade_to_black: bool,
 
     #[serde(rename = "transitions")]
     pub transitions: Transitions,
 
-    #[serde(rename = "recording")]
-    pub recording: Boolean,
+    #[serde(rename = "recording", with = "xml_bool")]
+    pub recording: bool,
 
-    #[serde(rename = "external")]
-    pub external: Boolean,
+    #[serde(rename = "external", with = "xml_bool")]
+    pub external: bool,
 
-    #[serde(rename = "streaming")]
-    pub streaming: Boolean,
+    #[serde(rename = "streaming", with = "xml_bool")]
+    pub streaming: bool,
 
-    #[serde(rename = "playList")]
-    pub play_list: Boolean,
+    #[serde(rename = "playList", with = "xml_bool")]
+    pub play_list: bool,
 
-    #[serde(rename = "multiCorder")]
-    pub multi_corder: Boolean,
+    #[serde(rename = "multiCorder", with = "xml_bool")]
+    pub multi_corder: bool,
 
-    #[serde(rename = "fullscreen")]
-    pub fullscreen: Boolean,
+    #[serde(rename = "fullscreen", with = "xml_bool")]
+    pub fullscreen: bool,
 
     #[serde(rename = "mix", default)]
     pub mix: Vec<Mix>,
@@ -60,7 +60,7 @@ pub struct Vmix {
     pub dynamic: Dynamic,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Audio {
     #[serde(rename = "master")]
     pub master: AudioBus,
@@ -87,31 +87,31 @@ pub struct Audio {
     pub bus_g: Option<AudioBus>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AudioBus {
     #[serde(rename = "@volume")]
-    pub volume: String,
+    pub volume: f64,
 
-    #[serde(rename = "@muted")]
-    pub muted: Boolean,
+    #[serde(rename = "@muted", with = "xml_bool")]
+    pub muted: bool,
 
     #[serde(rename = "@meterF1")]
-    pub meter_f1: String,
+    pub meter_f1: f64,
 
     #[serde(rename = "@meterF2")]
-    pub meter_f2: String,
+    pub meter_f2: f64,
 
     #[serde(rename = "@headphonesVolume", default)]
-    pub headphones_volume: Option<String>,
+    pub headphones_volume: Option<f64>,
 
-    #[serde(rename = "@solo", default)]
-    pub solo: Option<Boolean>,
+    #[serde(rename = "@solo", default, with = "xml_bool_option")]
+    pub solo: Option<bool>,
 
-    #[serde(rename = "@sendToMaster", default)]
-    pub send_to_master: Option<Boolean>,
+    #[serde(rename = "@sendToMaster", default, with = "xml_bool_option")]
+    pub send_to_master: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Dynamic {
     #[serde(rename = "input1")]
     pub input1: String,
@@ -138,13 +138,13 @@ pub struct Dynamic {
     pub value4: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Inputs {
     #[serde(rename = "input")]
     pub input: Vec<Input>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Input {
     // 属性
     #[serde(rename = "@key")]
@@ -171,35 +171,35 @@ pub struct Input {
     #[serde(rename = "@duration")]
     pub duration: String,
 
-    #[serde(rename = "@loop")]
-    pub input_loop: Boolean,
+    #[serde(rename = "@loop", with = "xml_bool")]
+    pub input_loop: bool,
 
-    #[serde(rename = "@muted", default)]
-    pub muted: Option<Boolean>,
+    #[serde(rename = "@muted", default, with = "xml_bool_option")]
+    pub muted: Option<bool>,
 
     #[serde(rename = "@volume", default)]
-    pub volume: Option<String>,
+    pub volume: Option<f64>,
 
     #[serde(rename = "@balance", default)]
-    pub balance: Option<String>,
+    pub balance: Option<f64>,
 
-    #[serde(rename = "@solo", default)]
-    pub solo: Option<Boolean>,
+    #[serde(rename = "@solo", default, with = "xml_bool_option")]
+    pub solo: Option<bool>,
 
-    #[serde(rename = "@soloPFL", default)]
-    pub solo_pfl: Option<Boolean>,
+    #[serde(rename = "@soloPFL", default, with = "xml_bool_option")]
+    pub solo_pfl: Option<bool>,
 
     #[serde(rename = "@audiobusses", default)]
     pub audiobusses: Option<String>,
 
     #[serde(rename = "@meterF1", default)]
-    pub meter_f1: Option<String>,
+    pub meter_f1: Option<f64>,
 
     #[serde(rename = "@meterF2", default)]
-    pub meter_f2: Option<String>,
+    pub meter_f2: Option<f64>,
 
     #[serde(rename = "@gainDb", default)]
-    pub gain_db: Option<String>,
+    pub gain_db: Option<f64>,
 
     #[serde(rename = "@selectedIndex", default)]
     pub selected_index: Option<String>,
@@ -228,7 +228,7 @@ pub struct Input {
     pub text_content: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Image {
     #[serde(rename = "index")]
     pub index: String,
@@ -239,7 +239,7 @@ pub struct Image {
     // text: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct List {
     #[serde(rename = "item", default)]
     pub item: Vec<ListItem>,
@@ -253,7 +253,7 @@ pub struct ItemClass {
     // text: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct InputOverlay {
     #[serde(rename = "@index")]
     pub index: String,
@@ -265,7 +265,7 @@ pub struct InputOverlay {
     pub position: Option<Position>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Position {
     #[serde(rename = "@panX", default)]
     pub pan_x: Option<String>,
@@ -293,7 +293,7 @@ pub struct Position {
 }
 
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Replay {
     // 子要素
     #[serde(rename = "timecode", default)]
@@ -340,25 +340,25 @@ pub struct Replay {
     pub speed_b: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Overlays {
     #[serde(rename = "overlay")]
     pub overlay: Vec<OverlaysOverlay>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct OverlaysOverlay {
     #[serde(rename = "@number")]
     pub number: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Transitions {
     #[serde(rename = "transition")]
     pub transition: Vec<Transition>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Transition {
     #[serde(rename = "@number")]
     pub number: String,
@@ -370,7 +370,7 @@ pub struct Transition {
     pub duration: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct ListItem {
     #[serde(rename = "@enabled", default)]
     pub enabled: Option<String>,
@@ -381,22 +381,71 @@ pub struct ListItem {
 }
 
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum Boolean {
-    #[serde(rename = "False")]
-    False,
+// Custom deserializer for XML boolean values
+mod xml_bool {
+    use serde::{Deserialize, Deserializer, Serializer};
 
-    #[serde(rename = "True")]
-    True,
+    pub fn serialize<S>(value: &bool, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let s = if *value { "True" } else { "False" };
+        serializer.serialize_str(s)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<bool, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let s = String::deserialize(deserializer)?;
+        match s.as_str() {
+            "True" => Ok(true),
+            "False" => Ok(false),
+            _ => Err(serde::de::Error::custom(format!("Invalid boolean value: {}", s))),
+        }
+    }
+}
+
+// Custom deserializer for optional XML boolean values
+mod xml_bool_option {
+    use serde::{Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(value: &Option<bool>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        match value {
+            Some(b) => {
+                let s = if *b { "True" } else { "False" };
+                serializer.serialize_str(s)
+            }
+            None => serializer.serialize_none(),
+        }
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Option<bool>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let opt = Option::<String>::deserialize(deserializer)?;
+        match opt {
+            Some(s) => match s.as_str() {
+                "True" => Ok(Some(true)),
+                "False" => Ok(Some(false)),
+                _ => Err(serde::de::Error::custom(format!("Invalid boolean value: {}", s))),
+            },
+            None => Ok(None),
+        }
+    }
 }
 // Outputs structure
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Outputs {
     #[serde(rename = "output", default)]
     pub output: Vec<Output>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Output {
     #[serde(rename = "@type")]
     pub output_type: String,
@@ -415,7 +464,7 @@ pub struct Output {
 }
 
 // Mix structure
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Mix {
     #[serde(rename = "@number")]
     pub number: String,
@@ -426,7 +475,7 @@ pub struct Mix {
 }
 
 // Crop structure for inputs
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Crop {
     #[serde(rename = "@X1")]
     pub x1: String,
