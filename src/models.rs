@@ -63,32 +63,32 @@ pub struct Vmix {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Audio {
     #[serde(rename = "master")]
-    pub master: Master,
+    pub master: AudioBus,
 
     #[serde(rename = "busA", default)]
-    pub bus_a: Option<Master>,
+    pub bus_a: Option<AudioBus>,
 
     #[serde(rename = "busB", default)]
-    pub bus_b: Option<Master>,
+    pub bus_b: Option<AudioBus>,
 
     #[serde(rename = "busC", default)]
-    pub bus_c: Option<Master>,
+    pub bus_c: Option<AudioBus>,
 
     #[serde(rename = "busD", default)]
-    pub bus_d: Option<Master>,
+    pub bus_d: Option<AudioBus>,
 
     #[serde(rename = "busE", default)]
-    pub bus_e: Option<Master>,
+    pub bus_e: Option<AudioBus>,
 
     #[serde(rename = "busF", default)]
-    pub bus_f: Option<Master>,
+    pub bus_f: Option<AudioBus>,
 
     #[serde(rename = "busG", default)]
-    pub bus_g: Option<Master>,
+    pub bus_g: Option<AudioBus>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Master {
+pub struct AudioBus {
     #[serde(rename = "@volume")]
     pub volume: String,
 
@@ -111,31 +111,31 @@ pub struct Master {
     pub send_to_master: Option<Boolean>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Dynamic {
     #[serde(rename = "input1")]
-    input1: String,
+    pub input1: String,
 
     #[serde(rename = "input2")]
-    input2: String,
+    pub input2: String,
 
     #[serde(rename = "input3")]
-    input3: String,
+    pub input3: String,
 
     #[serde(rename = "input4")]
-    input4: String,
+    pub input4: String,
 
     #[serde(rename = "value1")]
-    value1: String,
+    pub value1: String,
 
     #[serde(rename = "value2")]
-    value2: String,
+    pub value2: String,
 
     #[serde(rename = "value3")]
-    value3: String,
+    pub value3: String,
 
     #[serde(rename = "value4")]
-    value4: String,
+    pub value4: String,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -215,7 +215,7 @@ pub struct Input {
     pub replay: Option<Replay>,
 
     #[serde(rename = "overlay", default)]
-    pub overlay: Vec<PurpleOverlay>,
+    pub overlay: Vec<InputOverlay>,
 
     #[serde(rename = "crop", default)]
     pub crop: Option<Crop>,
@@ -228,13 +228,13 @@ pub struct Input {
     pub text_content: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Image {
     #[serde(rename = "index")]
-    index: String,
+    pub index: String,
 
     #[serde(rename = "name")]
-    name: String,
+    pub name: String,
     // #[serde(rename = "_text")]
     // text: String,
 }
@@ -245,16 +245,16 @@ pub struct List {
     pub item: Vec<ListItem>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ItemClass {
     #[serde(rename = "_selected")]
-    selected: String,
+    pub selected: String,
     // #[serde(rename = "_text")]
     // text: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct PurpleOverlay {
+pub struct InputOverlay {
     #[serde(rename = "@index")]
     pub index: String,
 
@@ -292,14 +292,6 @@ pub struct Position {
     pub height: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct FluffyOverlay {
-    #[serde(rename = "_index")]
-    index: String,
-
-    #[serde(rename = "_key")]
-    key: String,
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct Replay {
@@ -348,34 +340,34 @@ pub struct Replay {
     pub speed_b: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Overlays {
     #[serde(rename = "overlay")]
-    overlay: Vec<OverlaysOverlay>,
+    pub overlay: Vec<OverlaysOverlay>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OverlaysOverlay {
     #[serde(rename = "@number")]
-    number: String,
+    pub number: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Transitions {
     #[serde(rename = "transition")]
-    transition: Vec<Transition>,
+    pub transition: Vec<Transition>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Transition {
     #[serde(rename = "@number")]
-    number: String,
+    pub number: String,
 
     #[serde(rename = "@effect")]
-    effect: String,
+    pub effect: String,
 
     #[serde(rename = "@duration")]
-    duration: String,
+    pub duration: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -388,13 +380,6 @@ pub struct ListItem {
     pub text: Option<String>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(untagged)]
-pub enum OverlayUnion {
-    FluffyOverlay(FluffyOverlay),
-
-    PurpleOverlayArray(Vec<PurpleOverlay>),
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Boolean {
@@ -453,7 +438,7 @@ pub struct Crop {
     pub y2: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Audiobusses {
     #[serde(rename = "M")]
     M,
@@ -463,6 +448,21 @@ pub enum Audiobusses {
 
     #[serde(rename = "B")]
     B,
+
+    #[serde(rename = "C")]
+    C,
+
+    #[serde(rename = "D")]
+    D,
+
+    #[serde(rename = "E")]
+    E,
+
+    #[serde(rename = "F")]
+    F,
+
+    #[serde(rename = "G")]
+    G,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
