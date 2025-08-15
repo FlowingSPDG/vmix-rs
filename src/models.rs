@@ -14,6 +14,9 @@ pub struct Vmix {
     #[serde(rename = "inputs")]
     pub inputs: Inputs,
 
+    #[serde(rename = "outputs")]
+    pub outputs: Outputs,
+
     #[serde(rename = "overlays")]
     pub overlays: Overlays,
 
@@ -47,6 +50,9 @@ pub struct Vmix {
     #[serde(rename = "fullscreen")]
     pub fullscreen: Boolean,
 
+    #[serde(rename = "mix", default)]
+    pub mix: Vec<Mix>,
+
     #[serde(rename = "audio")]
     pub audio: Audio,
 
@@ -54,40 +60,55 @@ pub struct Vmix {
     pub dynamic: Dynamic,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Audio {
     #[serde(rename = "master")]
-    master: Master,
+    pub master: Master,
 
-    #[serde(rename = "busA")]
-    bus_a: Master,
+    #[serde(rename = "busA", default)]
+    pub bus_a: Option<Master>,
 
-    #[serde(rename = "busB")]
-    bus_b: Master,
+    #[serde(rename = "busB", default)]
+    pub bus_b: Option<Master>,
+
+    #[serde(rename = "busC", default)]
+    pub bus_c: Option<Master>,
+
+    #[serde(rename = "busD", default)]
+    pub bus_d: Option<Master>,
+
+    #[serde(rename = "busE", default)]
+    pub bus_e: Option<Master>,
+
+    #[serde(rename = "busF", default)]
+    pub bus_f: Option<Master>,
+
+    #[serde(rename = "busG", default)]
+    pub bus_g: Option<Master>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Master {
     #[serde(rename = "@volume")]
-    volume: String,
+    pub volume: String,
 
     #[serde(rename = "@muted")]
-    muted: Boolean,
+    pub muted: Boolean,
 
     #[serde(rename = "@meterF1")]
-    meter_f1: String,
+    pub meter_f1: String,
 
     #[serde(rename = "@meterF2")]
-    meter_f2: String,
+    pub meter_f2: String,
 
     #[serde(rename = "@headphonesVolume", default)]
-    headphones_volume: Option<String>,
+    pub headphones_volume: Option<String>,
 
     #[serde(rename = "@solo", default)]
-    solo: Option<Boolean>,
+    pub solo: Option<Boolean>,
 
     #[serde(rename = "@sendToMaster", default)]
-    send_to_master: Option<Boolean>,
+    pub send_to_master: Option<Boolean>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -180,18 +201,27 @@ pub struct Input {
     #[serde(rename = "@gainDb", default)]
     pub gain_db: Option<String>,
 
+    #[serde(rename = "@selectedIndex", default)]
+    pub selected_index: Option<String>,
+
     // 子要素
     #[serde(rename = "list", default)]
     pub list: Option<List>,
-
-    #[serde(rename = "selectedIndex", default)]
-    pub selected_index: Option<String>,
 
     #[serde(rename = "image", default)]
     pub image: Option<Image>,
 
     #[serde(rename = "replay", default)]
     pub replay: Option<Replay>,
+
+    #[serde(rename = "overlay", default)]
+    pub overlay: Vec<PurpleOverlay>,
+
+    #[serde(rename = "crop", default)]
+    pub crop: Option<Crop>,
+
+    #[serde(rename = "position", default)]
+    pub input_position: Option<Position>,
 
     // テキストコンテンツ（要素の中身）
     #[serde(rename = "$value", default)]
@@ -223,31 +253,43 @@ pub struct ItemClass {
     // text: String,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct PurpleOverlay {
-    #[serde(rename = "_index")]
-    index: String,
+    #[serde(rename = "@index")]
+    pub index: String,
 
-    #[serde(rename = "_key")]
-    key: String,
+    #[serde(rename = "@key")]
+    pub key: String,
 
-    #[serde(rename = "position")]
-    position: Option<Position>,
+    #[serde(rename = "position", default)]
+    pub position: Option<Position>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Position {
-    #[serde(rename = "panX")]
-    pan_x: f64,
+    #[serde(rename = "@panX", default)]
+    pub pan_x: Option<String>,
 
-    #[serde(rename = "zoomX")]
-    zoom_x: f64,
+    #[serde(rename = "@panY", default)]
+    pub pan_y: Option<String>,
 
-    #[serde(rename = "zoomY")]
-    zoom_y: f64,
+    #[serde(rename = "@zoomX", default)]
+    pub zoom_x: Option<String>,
 
-    #[serde(rename = "panY")]
-    pan_y: Option<f64>,
+    #[serde(rename = "@zoomY", default)]
+    pub zoom_y: Option<String>,
+
+    #[serde(rename = "@x", default)]
+    pub x: Option<String>,
+
+    #[serde(rename = "@y", default)]
+    pub y: Option<String>,
+
+    #[serde(rename = "@width", default)]
+    pub width: Option<String>,
+
+    #[serde(rename = "@height", default)]
+    pub height: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -354,13 +396,61 @@ pub enum OverlayUnion {
     PurpleOverlayArray(Vec<PurpleOverlay>),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Boolean {
     #[serde(rename = "False")]
     False,
 
     #[serde(rename = "True")]
     True,
+}
+// Outputs structure
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Outputs {
+    #[serde(rename = "output", default)]
+    pub output: Vec<Output>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Output {
+    #[serde(rename = "@type")]
+    pub output_type: String,
+    #[serde(rename = "@number")]
+    pub number: String,
+    #[serde(rename = "@source")]
+    pub source: String,
+    #[serde(rename = "@external", default)]
+    pub external: Option<String>,
+    #[serde(rename = "@ndi", default)]
+    pub ndi: Option<String>,
+    #[serde(rename = "@mix", default)]
+    pub mix: Option<String>,
+    #[serde(rename = "@inputNumber", default)]
+    pub input_number: Option<String>,
+}
+
+// Mix structure
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Mix {
+    #[serde(rename = "@number")]
+    pub number: String,
+    #[serde(rename = "preview")]
+    pub preview: String,
+    #[serde(rename = "active")]
+    pub active: String,
+}
+
+// Crop structure for inputs
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Crop {
+    #[serde(rename = "@X1")]
+    pub x1: String,
+    #[serde(rename = "@Y1")]
+    pub y1: String,
+    #[serde(rename = "@X2")]
+    pub x2: String,
+    #[serde(rename = "@Y2")]
+    pub y2: String,
 }
 
 #[derive(Serialize, Deserialize)]
