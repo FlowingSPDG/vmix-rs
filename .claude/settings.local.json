@@ -19,7 +19,14 @@
       "Bash(timeout 5s cargo run --example tcp_http_comparison)",
       "mcp__serena__replace_symbol_body",
       "mcp__serena__replace_regex",
-      "mcp__serena__think_about_whether_you_are_done"
+      "mcp__serena__think_about_whether_you_are_done",
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git restore:*)",
+      "Bash(git commit:*)",
+      "mcp__serena__find_file",
+      "WebFetch(domain:docs.rs)",
+      "Bash(timeout 30 cargo run --example http_example)"
     ],
     "deny": []
   }

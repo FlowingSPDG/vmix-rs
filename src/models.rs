@@ -222,10 +222,6 @@ pub struct Input {
 
     #[serde(rename = "position", default)]
     pub input_position: Option<Position>,
-
-    // テキストコンテンツ（要素の中身）
-    #[serde(rename = "$value", default)]
-    pub text_content: Option<String>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
