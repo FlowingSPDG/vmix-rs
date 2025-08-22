@@ -204,6 +204,9 @@ pub struct Input {
     #[serde(rename = "@selectedIndex", default)]
     pub selected_index: Option<String>,
 
+    #[serde(rename = "@preset", default)]
+    pub preset: Option<String>,
+
     // 子要素
     #[serde(rename = "list", default)]
     pub list: Option<List>,
