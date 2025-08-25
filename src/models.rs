@@ -14,8 +14,8 @@ pub struct Vmix {
     #[serde(rename = "inputs")]
     pub inputs: Inputs,
 
-    #[serde(rename = "outputs")]
-    pub outputs: Outputs,
+    #[serde(rename = "outputs", default)]
+    pub outputs: Option<Outputs>,
 
     #[serde(rename = "overlays")]
     pub overlays: Overlays,
