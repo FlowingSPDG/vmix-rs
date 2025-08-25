@@ -327,6 +327,8 @@ pub struct ListItem {
     pub enabled: Option<String>,
     #[serde(rename = "@selected", default)]
     pub selected: Option<String>,
+    #[serde(rename = "@index", default)]
+    pub index: Option<String>,
     #[serde(rename = "$value", default)]
     pub text: Option<String>,
 }
