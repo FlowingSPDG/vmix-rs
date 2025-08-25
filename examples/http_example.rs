@@ -5,7 +5,7 @@ use vmix_rs::http::HttpVmixClient;
 #[tokio::main]
 async fn main() -> Result<()> {
     // Create HTTP client
-    let client = HttpVmixClient::new_with_host_port("192.168.160.46", 8088, Duration::from_secs(10));
+    let client = HttpVmixClient::new_with_host_port("192.168.1.6", 8088, Duration::from_secs(10));
 
     println!("Testing vMix HTTP API Client");
     println!("=============================");
@@ -45,8 +45,8 @@ async fn main() -> Result<()> {
                     if let Some(list) = &input.list {
                         println!("     List has {} items", list.item.len());
                         for (i, item) in list.item.iter().take(3).enumerate() {
-                            println!("       Item {}: index={:?}, enabled={:?}, selected={:?}, text={:?}", 
-                                i, item.index, item.enabled, item.selected, item.text);
+                            println!("       Item {}: enabled={:?}, selected={:?}, text={:?}", 
+                                i, item.enabled, item.selected, item.text);
                         }
                     } else {
                         println!("     No list data found");
@@ -71,23 +71,23 @@ async fn main() -> Result<()> {
         Err(e) => println!("❌ Failed to get tally data: {}", e),
     }
 
-    // Test function execution (safe commands only) - DISABLED FOR PRODUCTION USE
-    println!("\nSkipping function execution tests to avoid affecting production vMix...");
-    
-    // // Example: Fade transition
-    // let mut params = HashMap::new();
-    // params.insert("Duration".to_string(), "1000".to_string());
-    // 
-    // match client.execute_function("Fade", &params).await {
-    //     Ok(_) => println!("✅ Fade command executed successfully"),
-    //     Err(e) => println!("⚠️  Fade command failed (this might be expected): {}", e),
-    // }
-    // 
-    // // Example: Cut transition (no parameters)
-    // match client.execute_function("Cut", &HashMap::new()).await {
-    //     Ok(_) => println!("✅ Cut command executed successfully"),
-    //     Err(e) => println!("⚠️  Cut command failed (this might be expected): {}", e),
-    // }
+    // Test function execution (safe commands only)
+    println!("\nTesting function execution...");
+
+    // Example: Fade transition
+    let mut params = HashMap::new();
+    params.insert("Duration".to_string(), "1000".to_string());
+
+    match client.execute_function("Fade", &params).await {
+        Ok(_) => println!("✅ Fade command executed successfully"),
+        Err(e) => println!("⚠️  Fade command failed (this might be expected): {}", e),
+    }
+
+    // Example: Cut transition (no parameters)
+    match client.execute_function("Cut", &HashMap::new()).await {
+        Ok(_) => println!("✅ Cut command executed successfully"),
+        Err(e) => println!("⚠️  Cut command failed (this might be expected): {}", e),
+    }
 
     // Test convenience methods
     println!("\nTesting convenience methods...");

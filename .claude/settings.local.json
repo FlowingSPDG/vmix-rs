@@ -20,8 +20,13 @@
       "mcp__serena__replace_symbol_body",
       "mcp__serena__replace_regex",
       "mcp__serena__think_about_whether_you_are_done",
-      "mcp__serena__insert_after_symbol",
-      "mcp__serena__find_referencing_symbols"
+      "Bash(git pull:*)",
+      "Bash(git add:*)",
+      "Bash(git restore:*)",
+      "Bash(git commit:*)",
+      "mcp__serena__find_file",
+      "WebFetch(domain:docs.rs)",
+      "Bash(timeout 30 cargo run --example http_example)"
     ],
     "deny": []
   }
