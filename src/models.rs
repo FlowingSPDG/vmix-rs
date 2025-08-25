@@ -229,11 +229,11 @@ pub struct Input {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Image {
-    #[serde(rename = "index")]
-    pub index: String,
+    #[serde(rename = "@index", default)]
+    pub index: Option<String>,
 
-    #[serde(rename = "name")]
-    pub name: String,
+    #[serde(rename = "@name", default)]
+    pub name: Option<String>,
     // #[serde(rename = "_text")]
     // text: String,
 }
