@@ -8,8 +8,8 @@ pub struct Vmix {
     #[serde(rename = "edition")]
     pub edition: String,
 
-    #[serde(rename = "preset")]
-    pub preset: String,
+    #[serde(rename = "preset", default)]
+    pub preset: Option<String>,
 
     #[serde(rename = "inputs")]
     pub inputs: Inputs,
