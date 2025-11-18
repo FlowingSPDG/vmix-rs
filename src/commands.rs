@@ -170,11 +170,15 @@ impl From<SendCommand> for Vec<u8> {
             SendCommand::FUNCTION(func, query) => {
                 format!("FUNCTION {} {}\r\n", func, query.unwrap_or("".to_string())).into_bytes()
             }
-            SendCommand::ACTS(command, input) => format!("ACTS {} {}\r\n", command, input).into_bytes(),
+            SendCommand::ACTS(command, input) => {
+                format!("ACTS {} {}\r\n", command, input).into_bytes()
+            }
             SendCommand::XML => "XML\r\n".as_bytes().to_vec(),
             SendCommand::XMLTEXT(path) => format!("XMLTEXT {}\r\n", path).into_bytes(),
             SendCommand::SUBSCRIBE(command) => format!("SUBSCRIBE {}\r\n", command).into_bytes(),
-            SendCommand::UNSUBSCRIBE(command) => format!("UNSUBSCRIBE {}\r\n", command).into_bytes(),
+            SendCommand::UNSUBSCRIBE(command) => {
+                format!("UNSUBSCRIBE {}\r\n", command).into_bytes()
+            }
             SendCommand::QUIT => "QUIT\r\n".as_bytes().to_vec(),
             SendCommand::VERSION => "VERSION\r\n".as_bytes().to_vec(),
             SendCommand::RAW(raw) => raw.into_bytes(),
@@ -225,13 +229,12 @@ impl TryFrom<&mut TcpStream> for RecvCommand {
         // remove \r\n
         let value = value.lines().collect::<String>();
 
-        let commands: Vec<String> = value
-            .split_whitespace()
-            .map(|s| s.to_string())
-            .collect();
+        let commands: Vec<String> = value.split_whitespace().map(|s| s.to_string()).collect();
 
         // first element
-        let command = commands.first().ok_or_else(|| anyhow::anyhow!("Empty command"))?;
+        let command = commands
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("Empty command"))?;
         let status: Status = commands.get(1).unwrap().to_owned().into();
         let body: Option<String> = commands.get(2).cloned();
         match command.as_str() {
