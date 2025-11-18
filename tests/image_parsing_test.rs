@@ -1,4 +1,4 @@
-use vmix_rs::models::{Input, Image};
+use vmix_rs::models::Input;
 use quick_xml::de;
 
 #[test]
