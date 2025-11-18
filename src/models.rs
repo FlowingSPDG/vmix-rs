@@ -212,7 +212,7 @@ pub struct Input {
     pub list: Option<List>,
 
     #[serde(rename = "image", default)]
-    pub image: Option<Image>,
+    pub image: Vec<Image>,
 
     #[serde(rename = "replay", default)]
     pub replay: Option<Replay>,
@@ -229,10 +229,10 @@ pub struct Input {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Image {
-    #[serde(rename = "@index", default)]
+    #[serde(rename = "index", default)]
     pub index: Option<String>,
 
-    #[serde(rename = "@name", default)]
+    #[serde(rename = "name", default)]
     pub name: Option<String>,
     // #[serde(rename = "_text")]
     // text: String,
