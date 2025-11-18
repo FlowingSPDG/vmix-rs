@@ -89,10 +89,7 @@ unsafe impl Sync for ActivatorsData {}
 
 // Helper functions to extract common functionality and handle errors safely
 fn parse_input_number(value: &str) -> InputNumber {
-    value.parse::<InputNumber>().unwrap_or_else(|_| {
-        // Default to input 1 if parsing fails
-        0
-    })
+    value.parse::<InputNumber>().unwrap_or(0)
 }
 
 fn parse_float(value: &str) -> f32 {

@@ -5,8 +5,8 @@ use crate::{
 };
 use anyhow::Result;
 use async_trait::async_trait;
-use reqwest::Client;
 use quick_xml::de;
+use reqwest::Client;
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
 
 #[derive(Debug, Clone)]

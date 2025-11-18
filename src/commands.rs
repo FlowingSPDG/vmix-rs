@@ -26,9 +26,10 @@ impl From<String> for Status {
             "ER" => Self::ER,
             _ => {
                 if let Ok(length) = value.parse::<u64>() {
-                    return Length(length);
-                };
-                return Self::Detail(value.to_string());
+                    Length(length)
+                } else {
+                    Self::Detail(value.to_string())
+                }
             }
         }
     }
@@ -162,21 +163,25 @@ unsafe impl Sync for SUBSCRIBECommand {}
 unsafe impl Send for Status {}
 unsafe impl Sync for Status {}
 
-impl Into<Vec<u8>> for SendCommand {
-    fn into(self) -> Vec<u8> {
-        match self {
-            Self::TALLY => "TALLY\r\n".as_bytes().to_vec(),
-            Self::FUNCTION(func, query) => {
+impl From<SendCommand> for Vec<u8> {
+    fn from(command: SendCommand) -> Self {
+        match command {
+            SendCommand::TALLY => "TALLY\r\n".as_bytes().to_vec(),
+            SendCommand::FUNCTION(func, query) => {
                 format!("FUNCTION {} {}\r\n", func, query.unwrap_or("".to_string())).into_bytes()
             }
-            Self::ACTS(command, input) => format!("ACTS {} {}\r\n", command, input).into_bytes(),
-            Self::XML => "XML\r\n".as_bytes().to_vec(),
-            Self::XMLTEXT(path) => format!("XMLTEXT {}\r\n", path).into_bytes(),
-            Self::SUBSCRIBE(command) => format!("SUBSCRIBE {}\r\n", command).into_bytes(),
-            Self::UNSUBSCRIBE(command) => format!("UNSUBSCRIBE {}\r\n", command).into_bytes(),
-            Self::QUIT => "QUIT\r\n".as_bytes().to_vec(),
-            Self::VERSION => "VERSION\r\n".as_bytes().to_vec(),
-            Self::RAW(raw) => raw.into_bytes(),
+            SendCommand::ACTS(command, input) => {
+                format!("ACTS {} {}\r\n", command, input).into_bytes()
+            }
+            SendCommand::XML => "XML\r\n".as_bytes().to_vec(),
+            SendCommand::XMLTEXT(path) => format!("XMLTEXT {}\r\n", path).into_bytes(),
+            SendCommand::SUBSCRIBE(command) => format!("SUBSCRIBE {}\r\n", command).into_bytes(),
+            SendCommand::UNSUBSCRIBE(command) => {
+                format!("UNSUBSCRIBE {}\r\n", command).into_bytes()
+            }
+            SendCommand::QUIT => "QUIT\r\n".as_bytes().to_vec(),
+            SendCommand::VERSION => "VERSION\r\n".as_bytes().to_vec(),
+            SendCommand::RAW(raw) => raw.into_bytes(),
         }
     }
 }
@@ -202,41 +207,37 @@ impl TryFrom<&mut TcpStream> for RecvCommand {
         // Read directly from TcpStream to avoid BufReader buffering issues
         let mut value = String::new();
         let mut buffer = [0u8; 1];
-        
+
         // Read byte by byte until we hit \n
         loop {
             let bytes_read = stream.read(&mut buffer)?;
             if bytes_read == 0 {
-                return Err(anyhow::anyhow!(std::io::Error::new(std::io::ErrorKind::ConnectionAborted, "connection aborted")));
+                return Err(anyhow::anyhow!(std::io::Error::new(
+                    std::io::ErrorKind::ConnectionAborted,
+                    "connection aborted"
+                )));
             }
-            
+
             let ch = buffer[0] as char;
             value.push(ch);
-            
+
             if ch == '\n' {
                 break;
             }
         }
-        
+
         // remove \r\n
         let value = value.lines().collect::<String>();
 
-        let mut commands: Vec<String> = vec![];
-        let mut iter = value.split_whitespace();
-        loop {
-            if let Some(command) = iter.next() {
-                commands.push(command.to_string());
-            } else {
-                break;
-            }
-        }
+        let commands: Vec<String> = value.split_whitespace().map(|s| s.to_string()).collect();
 
         // first element
-        let binding: &String = commands.get(0).unwrap();
-        let command = binding.as_str().try_into()?;
+        let command = commands
+            .first()
+            .ok_or_else(|| anyhow::anyhow!("Empty command"))?;
         let status: Status = commands.get(1).unwrap().to_owned().into();
         let body: Option<String> = commands.get(2).cloned();
-        match command {
+        match command.as_str() {
             // Example Response: TALLY OK 0121...\r\n
             "TALLY" => {
                 let mut tally_map = HashMap::new();
@@ -275,12 +276,15 @@ impl TryFrom<&mut TcpStream> for RecvCommand {
                     let mut bytes_read = 0;
                     let start_time = std::time::Instant::now();
                     let read_timeout = Duration::from_secs(5); // 5 second timeout for XML reads
-                    
+
                     while bytes_read < xml_buffer.len() {
                         match stream.read(&mut xml_buffer[bytes_read..]) {
                             Ok(0) => {
                                 // EOF reached before reading all expected bytes
-                                return Err(anyhow::anyhow!(std::io::Error::new(std::io::ErrorKind::ConnectionAborted, "connection aborted")));
+                                return Err(anyhow::anyhow!(std::io::Error::new(
+                                    std::io::ErrorKind::ConnectionAborted,
+                                    "connection aborted"
+                                )));
                             }
                             Ok(n) => {
                                 bytes_read += n;
@@ -300,10 +304,10 @@ impl TryFrom<&mut TcpStream> for RecvCommand {
                                     return Err(anyhow::anyhow!(e));
                                 }
                                 _ => return Err(anyhow::anyhow!(e)),
-                            }
+                            },
                         }
                     }
-                    
+
                     let xml = String::from_utf8(xml_buffer)?.trim_end().to_string();
                     return Ok(Self::XML(XMLResponse { status, body: xml }));
                 }
