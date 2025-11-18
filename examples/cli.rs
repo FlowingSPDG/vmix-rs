@@ -1,5 +1,9 @@
 use anyhow::Result;
-use std::{io::{stdin, Write}, net::SocketAddr, time::Duration};
+use std::{
+    io::{stdin, Write},
+    net::SocketAddr,
+    time::Duration,
+};
 use tokio::sync::mpsc::unbounded_channel;
 use vmix_rs::{
     commands::{RecvCommand, SendCommand},
@@ -10,7 +14,7 @@ use vmix_rs::{
 #[tokio::main]
 async fn main() -> Result<()> {
     let addr: SocketAddr = "127.0.0.1:8099".parse()?;
-    
+
     println!("Attempting to connect to vMix at {}...", addr);
     let vmix = match VmixApi::new(addr, Duration::from_secs(2)).await {
         Ok(api) => {
@@ -108,7 +112,8 @@ async fn main() -> Result<()> {
         }
     });
 
-    println!("\n🚀 RUNNING... 
+    println!(
+        "\n🚀 RUNNING... 
 
 Commands you can try:
   - 'xml'     : Get vMix state
@@ -118,26 +123,27 @@ Commands you can try:
   - 'quit'    : Exit application
   - Or type any raw vMix command
 
-Type commands and press Enter, or Ctrl+C to exit:\n");
+Type commands and press Enter, or Ctrl+C to exit:\n"
+    );
 
     // Command input from stdin with proper error handling
     let input_task = tokio::task::spawn_blocking(move || {
         loop {
             print!("vmix> ");
             std::io::stdout().flush().unwrap();
-            
+
             let mut buffer = String::new();
             match stdin().read_line(&mut buffer) {
                 Ok(_) => {
                     let trimmed = buffer.trim().to_lowercase();
-                    
+
                     let command = match trimmed.as_str() {
                         "quit" | "exit" => {
                             println!("👋 Exiting...");
                             SendCommand::QUIT
-                        },
+                        }
                         "xml" => SendCommand::XML,
-                        "tally" => SendCommand::TALLY, 
+                        "tally" => SendCommand::TALLY,
                         "version" => SendCommand::VERSION,
                         "cut" => SendCommand::FUNCTION("Cut".to_string(), None),
                         "fade" => SendCommand::FUNCTION("Fade".to_string(), None),
@@ -148,12 +154,12 @@ Type commands and press Enter, or Ctrl+C to exit:\n");
                             SendCommand::RAW(buffer)
                         }
                     };
-                    
+
                     if let Err(e) = command_sender.send(command) {
                         eprintln!("❌ Failed to send command: {}", e);
                         break;
                     }
-                    
+
                     if matches!(trimmed.as_str(), "quit" | "exit") {
                         break;
                     }
@@ -183,7 +189,7 @@ Type commands and press Enter, or Ctrl+C to exit:\n");
         },
         _ = tokio::signal::ctrl_c() => {
             println!("\n🛑 Received Ctrl+C, shutting down gracefully...");
-            
+
             // Force abort all tasks to ensure quick shutdown
             println!("🔄 Application shutting down...");
             std::process::exit(0);

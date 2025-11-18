@@ -291,7 +291,6 @@ pub struct Position {
     pub height: Option<String>,
 }
 
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Replay {
     // 子要素
@@ -381,7 +380,6 @@ pub struct ListItem {
     pub text: Option<String>,
 }
 
-
 // Custom deserializer for XML boolean values
 mod xml_bool {
     use serde::{Deserialize, Deserializer, Serializer};
@@ -402,7 +400,10 @@ mod xml_bool {
         match s.as_str() {
             "True" => Ok(true),
             "False" => Ok(false),
-            _ => Err(serde::de::Error::custom(format!("Invalid boolean value: {}", s))),
+            _ => Err(serde::de::Error::custom(format!(
+                "Invalid boolean value: {}",
+                s
+            ))),
         }
     }
 }
@@ -433,7 +434,10 @@ mod xml_bool_option {
             Some(s) => match s.as_str() {
                 "True" => Ok(Some(true)),
                 "False" => Ok(Some(false)),
-                _ => Err(serde::de::Error::custom(format!("Invalid boolean value: {}", s))),
+                _ => Err(serde::de::Error::custom(format!(
+                    "Invalid boolean value: {}",
+                    s
+                ))),
             },
             None => Ok(None),
         }

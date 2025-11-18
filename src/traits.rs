@@ -21,7 +21,7 @@ pub trait VmixApiClient {
     /// # Example
     /// ```rust,ignore
     /// use std::collections::HashMap;
-    /// 
+    ///
     /// let mut params = HashMap::new();
     /// params.insert("Input".to_string(), "1".to_string());
     /// params.insert("Duration".to_string(), "1000".to_string());
@@ -60,7 +60,7 @@ pub trait VmixApiClient {
 /// This trait is designed specifically for TCP-based communication
 /// with vMix instances. It focuses on command sending and real-time
 /// event streaming without expecting specific responses to commands.
-/// 
+///
 /// The TCP API is asynchronous by nature - you send commands and
 /// receive events independently. Commands may not have immediate
 /// responses, and other events (ACTS, VERSION, etc.) may arrive

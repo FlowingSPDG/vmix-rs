@@ -1,9 +1,8 @@
 use anyhow::Result;
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
 use vmix_rs::{
-    commands::{SendCommand, SUBSCRIBECommand},
+    commands::{SUBSCRIBECommand, SendCommand},
     http::HttpVmixClient,
-
     vmix::VmixApi,
 };
 
@@ -29,7 +28,7 @@ async fn main() -> Result<()> {
 
     // Compare command sending performance (TCP) vs request-response (HTTP)
     println!("\n2. Command Execution Comparison:");
-    
+
     // TCP: Send command without waiting for response
     println!("   TCP Command Sending (async, no response wait):");
     let start = std::time::Instant::now();
@@ -92,7 +91,7 @@ async fn main() -> Result<()> {
     // Demonstrate TCP-specific real-time capabilities
     println!("\n4. TCP Real-time Event Streaming:");
     println!("   Subscribing to TALLY updates...");
-    
+
     match tcp_client.send_command(SendCommand::SUBSCRIBE(SUBSCRIBECommand::TALLY)) {
         Ok(_) => println!("   ✅ TALLY subscription sent"),
         Err(e) => println!("   ❌ Failed to subscribe: {}", e),

@@ -1,23 +1,19 @@
-use std::{
-    net::SocketAddr,
-    sync::Arc,
-    time::Duration,
-};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use vmix_rs::vmix::VmixApi;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vmix_rs::traits::VmixTcpApiClient;
-    use vmix_rs::models::{Vmix, Input, State};
     use quick_xml::de;
+    use vmix_rs::models::{Input, State, Vmix};
+    use vmix_rs::traits::VmixTcpApiClient;
 
     #[test]
     fn test_actual_vmix_xml_parsing() {
         // Test with actual vMix XML from http://192.168.160.54:8088/api
         let actual_input_running = r#"<input key="f9bc0129-670f-440c-8ef4-fbf7173dfbda" number="3" type="Capture" title="CAMSWer" shortTitle="CAMSWer" state="Running" position="0" duration="0" loop="False" muted="True" volume="100" balance="0" solo="False" soloPFL="False" audiobusses="M" meterF1="0" meterF2="0" gainDb="0">CAMSWer</input>"#;
-        
+
         let actual_input_paused = r#"<input key="f7bf0353-adfc-4087-abd6-47a121b54016" number="1" type="Replay" title="20250814_STAGE0 - A" shortTitle="20250814_STAGE0" state="Paused" position="8296889" duration="8296972" loop="True" muted="False" volume="100" balance="0" solo="False" soloPFL="False" audiobusses="M" meterF1="0" meterF2="0" gainDb="0">20250814_STAGE0 - A</input>"#;
 
         // Test parsing
@@ -51,25 +47,30 @@ mod tests {
     async fn test_actual_vmix_xml_full_parsing() {
         // Test if we can fetch and parse the actual XML
         let xml_result = reqwest::get("http://192.168.160.54:8088/api").await;
-        
+
         if let Ok(response) = xml_result {
             if let Ok(xml_text) = response.text().await {
                 println!("Fetched XML from actual vMix instance");
-                
+
                 let vmix_result: Result<Vmix, _> = de::from_str(&xml_text);
                 match vmix_result {
                     Ok(vmix_data) => {
                         println!("✅ Successfully parsed actual vMix XML");
                         println!("Total inputs: {}", vmix_data.inputs.input.len());
-                        
+
                         for input in &vmix_data.inputs.input {
-                            println!("Input {}: {} - state: {:?}", 
-                                input.number, input.title, input.state);
+                            println!(
+                                "Input {}: {} - state: {:?}",
+                                input.number, input.title, input.state
+                            );
                         }
                     }
                     Err(e) => {
                         println!("❌ Failed to parse actual vMix XML: {}", e);
-                        println!("XML content (first 500 chars): {}", &xml_text[..500.min(xml_text.len())]);
+                        println!(
+                            "XML content (first 500 chars): {}",
+                            &xml_text[..500.min(xml_text.len())]
+                        );
                         panic!("Actual XML parsing failed");
                     }
                 }
@@ -79,14 +80,12 @@ mod tests {
         }
     }
 
-
-
     #[tokio::test]
     async fn test_vmix_api_send_sync_traits() {
         // This test will only compile if VmixApi implements Send + Sync
         fn assert_send<T: Send>() {}
         fn assert_sync<T: Sync>() {}
-        
+
         assert_send::<VmixApi>();
         assert_sync::<VmixApi>();
     }
@@ -95,22 +94,22 @@ mod tests {
     async fn test_vmix_api_with_arc_mutex() {
         // Test that VmixApi can be used with Arc<Mutex<>>
         // This simulates the TCP-only usage pattern
-        
+
         // Note: This test uses a dummy address that won't connect
         // In a real scenario, you would use a valid vMix instance
         let addr: SocketAddr = "127.0.0.1:8099".parse().unwrap();
         let timeout = Duration::from_secs(5);
-        
+
         // Test Arc<tokio::sync::Mutex<VmixApi>>
         let result = VmixApi::new(addr, timeout).await;
-        
+
         // Since we're not running an actual vMix instance, the connection will fail
         // But this test ensures that the type system accepts our Send + Sync implementation
         match result {
             Ok(api) => {
                 let api_arc = Arc::new(Mutex::new(api));
                 let api_clone = api_arc.clone();
-                
+
                 // This should compile without errors if Send + Sync are properly implemented
                 tokio::spawn(async move {
                     let client = api_clone.lock().await;
@@ -134,14 +133,14 @@ mod tests {
         // Test that VmixApi can be used with Arc<std::sync::Mutex<>>
         let addr: SocketAddr = "127.0.0.1:8099".parse().unwrap();
         let timeout = Duration::from_secs(5);
-        
+
         let result = VmixApi::new(addr, timeout).await;
-        
+
         match result {
             Ok(api) => {
                 let api_arc = Arc::new(std::sync::Mutex::new(api));
                 let api_clone = api_arc.clone();
-                
+
                 // This should compile without errors if Send + Sync are properly implemented
                 tokio::spawn(async move {
                     let client = api_clone.lock().unwrap();
@@ -157,18 +156,18 @@ mod tests {
         }
     }
 
-    #[tokio::test] 
+    #[tokio::test]
     async fn test_spawn_multiple_tasks_tcp_only() {
         // Test spawning multiple tasks that would use VmixApi for TCP operations
         let addr: SocketAddr = "127.0.0.1:8099".parse().unwrap();
         let timeout = Duration::from_secs(1);
-        
+
         let result = VmixApi::new(addr, timeout).await;
-        
+
         match result {
             Ok(api) => {
                 let api_arc = Arc::new(Mutex::new(api));
-                
+
                 let handles: Vec<_> = (0..3)
                     .map(|_| {
                         let api_clone = api_arc.clone();
@@ -182,7 +181,7 @@ mod tests {
                         })
                     })
                     .collect();
-                
+
                 // Wait for all tasks to complete
                 for handle in handles {
                     handle.await.unwrap();
@@ -206,15 +205,15 @@ mod tests {
         // Test that VmixApi shuts down properly even when connection fails
         let addr: SocketAddr = "127.0.0.1:8099".parse().unwrap();
         let timeout = Duration::from_millis(100); // Short timeout for quick test
-        
+
         let result = VmixApi::new(addr, timeout).await;
-        
+
         match result {
             Ok(api) => {
                 // If connection succeeds, test normal shutdown
                 assert!(api.is_connected());
                 drop(api); // This should trigger clean shutdown
-                // If we reach here, shutdown didn't hang
+                           // If we reach here, shutdown didn't hang
             }
             Err(_) => {
                 // Expected - no vMix instance running

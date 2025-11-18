@@ -1,18 +1,22 @@
-use vmix_rs::models::Input;
 use quick_xml::de;
+use vmix_rs::models::Input;
 
 #[test]
 fn test_image_parsing_without_image_element() {
     // image要素が存在しない場合のテスト
     let xml_without_image = r#"<input key="test-key" number="1" type="Capture" title="Test" shortTitle="Test" state="Running" position="0" duration="0" loop="False">Test</input>"#;
-    
+
     let result: Result<Input, _> = de::from_str(xml_without_image);
-    
+
     match result {
         Ok(input) => {
             println!("✅ Successfully parsed input without image element");
             println!("   image vec length: {}", input.image.len());
-            assert_eq!(input.image.len(), 0, "image should be empty Vec when element is missing");
+            assert_eq!(
+                input.image.len(),
+                0,
+                "image should be empty Vec when element is missing"
+            );
         }
         Err(e) => {
             println!("❌ Failed to parse input without image element: {}", e);
@@ -30,9 +34,9 @@ fn test_image_parsing_with_single_image_element() {
             <name>test.jpg</name>
         </image>
     </input>"#;
-    
+
     let result: Result<Input, _> = de::from_str(xml_with_single_image);
-    
+
     match result {
         Ok(input) => {
             println!("✅ Successfully parsed input with single image element");
@@ -62,9 +66,9 @@ fn test_image_parsing_with_multiple_image_elements() {
             <name>test2.jpg</name>
         </image>
     </input>"#;
-    
+
     let result: Result<Input, _> = de::from_str(xml_with_multiple_images);
-    
+
     match result {
         Ok(input) => {
             println!("✅ Successfully parsed input with multiple image elements");
@@ -72,7 +76,10 @@ fn test_image_parsing_with_multiple_image_elements() {
             assert_eq!(input.image.len(), 2, "image should contain 2 elements");
         }
         Err(e) => {
-            println!("❌ Failed to parse input with multiple image elements: {}", e);
+            println!(
+                "❌ Failed to parse input with multiple image elements: {}",
+                e
+            );
             panic!("Parsing failed: {}", e);
         }
     }
@@ -84,9 +91,9 @@ fn test_image_parsing_with_empty_image_element() {
     let xml_with_empty_image = r#"<input key="test-key" number="1" type="Images" title="Test" shortTitle="Test" state="Running" position="0" duration="0" loop="False">
         <image></image>
     </input>"#;
-    
+
     let result: Result<Input, _> = de::from_str(xml_with_empty_image);
-    
+
     match result {
         Ok(input) => {
             println!("✅ Successfully parsed input with empty image element");
@@ -100,4 +107,3 @@ fn test_image_parsing_with_empty_image_element() {
         }
     }
 }
-

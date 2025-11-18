@@ -35,7 +35,7 @@ impl Drop for VmixApi {
         // Signal all threads to shutdown immediately
         self.shutdown_signal.store(true, Ordering::SeqCst);
         self.error_signal.store(true, Ordering::SeqCst);
-        
+
         // Explicitly close the original stream to force both reader and writer to exit
         // This will cause any blocking reads/writes to return with an error
         if let Ok(mut stream_guard) = self.original_stream.lock() {
@@ -49,12 +49,12 @@ impl Drop for VmixApi {
 
         // Wait for threads to complete with timeout
         let shutdown_timeout = Duration::from_millis(500);
-        
+
         // Join reader thread with timeout
         if let Some(handle) = self.reader_handle.take() {
             // Give the reader thread a brief moment to notice the shutdown signal
             std::thread::sleep(Duration::from_millis(10));
-            
+
             // Simple timeout: try to join, but don't wait forever
             let start_time = std::time::Instant::now();
             loop {
@@ -71,8 +71,8 @@ impl Drop for VmixApi {
                 std::thread::sleep(Duration::from_millis(10));
             }
         }
-        
-        // Join writer thread with timeout  
+
+        // Join writer thread with timeout
         if let Some(handle) = self.writer_handle.take() {
             let start_time = std::time::Instant::now();
             loop {
@@ -110,7 +110,7 @@ impl VmixApi {
         let mut reader_stream = stream
             .try_clone()
             .map_err(|e| anyhow::anyhow!("Failed to clone stream for reader: {}", e))?;
-        
+
         // Set reader stream to non-blocking mode for better shutdown handling
         reader_stream
             .set_nonblocking(true)
@@ -268,10 +268,11 @@ impl VmixApi {
     /// Check if the connection is still alive
     pub fn is_connected(&self) -> bool {
         // First check atomic flags for immediate shutdown/error detection
-        if self.shutdown_signal.load(Ordering::Relaxed) || self.error_signal.load(Ordering::Relaxed) {
+        if self.shutdown_signal.load(Ordering::Relaxed) || self.error_signal.load(Ordering::Relaxed)
+        {
             return false;
         }
-        
+
         // Perform lightweight socket health check
         if let Ok(stream_guard) = self.original_stream.try_lock() {
             if let Some(stream) = stream_guard.as_ref() {
@@ -290,7 +291,7 @@ impl VmixApi {
                         }
                         std::io::ErrorKind::ConnectionAborted
                         | std::io::ErrorKind::ConnectionReset
-                        | std::io::ErrorKind::UnexpectedEof 
+                        | std::io::ErrorKind::UnexpectedEof
                         | std::io::ErrorKind::NotConnected => {
                             // Connection is definitely closed
                             false
@@ -299,7 +300,7 @@ impl VmixApi {
                             // Other errors - assume still connected to avoid false negatives
                             true
                         }
-                    }
+                    },
                 }
             } else {
                 // Stream has been taken (during shutdown)
