@@ -1,13 +1,10 @@
-use crate::{
-    commands::{InputNumber, TallyData},
-    models::Vmix,
-    traits::VmixApiClient,
-};
+use crate::traits::VmixApiClient;
 use anyhow::Result;
 use async_trait::async_trait;
-use quick_xml::de;
 use reqwest::Client;
 use std::{collections::HashMap, net::SocketAddr, time::Duration};
+use vmix_core::Vmix;
+use vmix_tcp::{InputNumber, TallyData};
 
 #[derive(Debug, Clone)]
 pub struct HttpVmixClient {
@@ -71,7 +68,7 @@ impl HttpVmixClient {
         let response = self.client.get(&self.base_url).send().await?;
 
         let xml_text = response.text().await?;
-        let vmix_data: Vmix = de::from_str(&xml_text)?;
+        let vmix_data: Vmix = vmix_core::from_str(&xml_text)?;
         Ok(vmix_data)
     }
 

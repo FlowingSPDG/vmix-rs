@@ -2,70 +2,72 @@
 
 A Rust library for interacting with vMix via TCP and HTTP APIs.
 
-## Overview
-
-This library provides client implementations for controlling vMix through its TCP and HTTP APIs. It supports real-time command execution, event streaming, and XML state parsing.
+[![Crates.io](https://img.shields.io/crates/v/vmix_rs.svg)](https://crates.io/crates/vmix_rs)
+[![Documentation](https://docs.rs/vmix_rs/badge.svg)](https://docs.rs/vmix_rs)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
-- **TCP API** (default): Synchronous client for real-time command/event communication
-- **HTTP API** (optional): Async client for REST-style operations (requires `http` feature)
-- Thread-safe client implementations
-- XML state parsing with strongly-typed models
-- Minimal dependencies for the TCP client
+This library is organized into separate crates for different use cases:
+
+- **vmix-core**: Core data structures and XML parsing (`no_std` compatible)
+- **vmix-tcp**: TCP API client
+- **vmix-http**: HTTP API client (async)
+- **vmix-rs**: Convenience wrapper (this crate)
 
 ## Installation
 
-Add this to your `Cargo.toml`:
-
 ```toml
 [dependencies]
-vmix_rs = "0.1.0"
-```
+# For desktop applications with both TCP and HTTP support
+vmix_rs = { version = "0.1.0", features = ["full"] }
 
-For HTTP API support:
+# TCP only
+vmix_rs = { version = "0.1.0", features = ["tcp"] }
 
-```toml
-[dependencies]
+# HTTP only
 vmix_rs = { version = "0.1.0", features = ["http"] }
+
+# For embedded/WebAssembly (no_std)
+vmix-core = "0.1.0"
 ```
 
 ## Usage
 
-See the [documentation](https://docs.rs/vmix_rs) for detailed API usage and examples.
+### Desktop Applications
 
-Quick examples are available in the `examples/` directory:
+Use `vmix-rs` with TCP/HTTP features:
 
-- `cli.rs` - Interactive TCP client example
-- `tcp_http_comparison.rs` - TCP and HTTP API comparison (requires `http` feature)
-- `http_example.rs` - HTTP client example (requires `http` feature)
-
-## Running Examples
-
-TCP API example:
-```bash
-cargo run --example cli
+```rust
+use vmix_rs::{VmixApi, HttpVmixClient};
 ```
 
-HTTP API examples:
+### Embedded/WebAssembly (no_std)
+
+Use `vmix-core` directly for XML parsing only. You'll need to handle network communication yourself:
+
+```rust
+#![no_std]
+extern crate alloc;
+
+use vmix_core::{Vmix, from_str};
+
+// Parse XML data (obtained from your own HTTP/TCP client)
+let vmix_state: Vmix = from_str(xml_string)?;
+```
+
+## Examples
+
 ```bash
+# TCP client
+cargo run --example cli --features tcp
+
+# HTTP client
 cargo run --example http_example --features http
-cargo run --example tcp_http_comparison --features http
+
+# TCP/HTTP comparison
+cargo run --example tcp_http_comparison --features full
 ```
-
-## Testing
-
-Run the test suite:
-```bash
-cargo test
-```
-
-Run tests with HTTP features:
-```bash
-cargo test --features http
-```
-
-Note: Some tests require an actual vMix instance running and will be skipped if not available.
 
 ## License
 
@@ -74,7 +76,3 @@ MIT
 ## Author
 
 Shugo Kawamura ([@FlowingSPDG](https://github.com/FlowingSPDG))
-
-## Contributing
-
-Pull requests are welcome.

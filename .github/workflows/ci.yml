@@ -48,15 +48,59 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
 
-      - name: Run clippy
-        run: cargo clippy --all-targets -- -D warnings
+      - name: Run clippy (workspace)
+        run: cargo clippy --workspace --all-targets -- -D warnings
         continue-on-error: ${{ matrix.rust == 'nightly' }}
 
-      - name: Build
-        run: cargo build --verbose
+      - name: Build workspace
+        run: cargo build --workspace --verbose
 
-      - name: Run tests
-        run: cargo test --verbose
+      - name: Run tests (workspace)
+        run: cargo test --workspace --verbose
+
+      - name: Build with all features
+        run: cargo build --workspace --all-features --verbose
+
+      - name: Test with all features
+        run: cargo test --workspace --all-features --verbose
+
+  no-std:
+    name: no_std compatibility
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build vmix-core (no_std)
+        run: cargo build -p vmix-core --no-default-features --verbose
+
+      - name: Build vmix-core (with std)
+        run: cargo build -p vmix-core --features std --verbose
+
+  crates:
+    name: Build individual crates
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        crate: [vmix-core, vmix-tcp, vmix-http, vmix-rs]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Build ${{ matrix.crate }}
+        run: cargo build -p ${{ matrix.crate }} --verbose
+
+      - name: Test ${{ matrix.crate }}
+        run: cargo test -p ${{ matrix.crate }} --verbose
+        continue-on-error: true
 
   lint:
     name: Lint
@@ -75,7 +119,7 @@ jobs:
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --workspace --all-targets -- -D warnings
 
   build:
     name: Build
@@ -92,5 +136,4 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build release
-        run: cargo build --release --verbose
-
+        run: cargo build --workspace --release --verbose
