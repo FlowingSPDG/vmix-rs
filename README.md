@@ -2,8 +2,8 @@
 
 A Rust library for interacting with vMix via TCP and HTTP APIs.
 
-[![Crates.io](https://img.shields.io/crates/v/vmix_rs.svg)](https://crates.io/crates/vmix_rs)
-[![Documentation](https://docs.rs/vmix_rs/badge.svg)](https://docs.rs/vmix_rs)
+[![Crates.io](https://img.shields.io/crates/v/vmix-rs.svg)](https://crates.io/crates/vmix-rs)
+[![Documentation](https://docs.rs/vmix-rs/badge.svg)](https://docs.rs/vmix-rs)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
@@ -22,13 +22,13 @@ This library is organized into separate crates for different use cases:
 ```toml
 [dependencies]
 # Both TCP and HTTP support
-vmix_rs = { version = "0.2.0", features = ["full"] }
+vmix-rs = { version = "0.2.0", features = ["full"] }
 
 # TCP only
-vmix_rs = { version = "0.2.0", features = ["tcp"] }
+vmix-rs = { version = "0.2.0", features = ["tcp"] }
 
 # HTTP only
-vmix_rs = { version = "0.2.0", features = ["http"] }
+vmix-rs = { version = "0.2.0", features = ["http"] }
 ```
 
 ### WebAssembly
@@ -55,7 +55,7 @@ vmix-core = { version = "0.2.0", features = ["xml"] }
 ### Desktop Applications
 
 ```rust
-use vmix_rs::{VmixApi, HttpVmixClient};
+use vmix-rs::{VmixApi, HttpVmixClient};
 use std::time::Duration;
 
 // TCP API
@@ -68,14 +68,14 @@ let http_client = HttpVmixClient::new("127.0.0.1:8088".parse()?, Duration::from_
 ### WebAssembly
 
 ```rust
-use vmix_core::{Vmix, from_str};
+use vmix-core::{Vmix, from_str};
 
 // Fetch XML from vMix via your HTTP client
 // let xml = fetch_xml_from_vmix().await?;
 
 // Parse XML to strongly-typed structures
-let vmix_state: Vmix = from_str(&xml)?;
-println!("Active input: {}", vmix_state.active);
+let vmix-state: Vmix = from_str(&xml)?;
+println!("Active input: {}", vmix-state.active);
 ```
 
 ### Embedded Systems (Embassy, etc.)
@@ -84,7 +84,7 @@ println!("Active input: {}", vmix_state.active);
 #![no_std]
 extern crate alloc;
 
-use vmix_core::Vmix;
+use vmix-core::Vmix;
 
 // Option 1: Use struct definitions only
 // Manually populate structs from TCP XMLTEXT commands
@@ -92,10 +92,10 @@ use vmix_core::Vmix;
 
 // Option 2: With XML parsing (requires 'xml' feature)
 #[cfg(feature = "xml")]
-use vmix_core::from_str;
+use vmix-core::from_str;
 
 #[cfg(feature = "xml")]
-fn parse_vmix_xml(xml: &str) -> Result<Vmix, quick_xml::DeError> {
+fn parse_vmix-xml(xml: &str) -> Result<Vmix, quick_xml::DeError> {
     from_str(xml)
 }
 ```
