@@ -22,13 +22,13 @@ This library is organized into separate crates for different use cases:
 ```toml
 [dependencies]
 # Both TCP and HTTP support
-vmix_rs = { version = "0.1.0", features = ["full"] }
+vmix_rs = { version = "0.2.0", features = ["full"] }
 
 # TCP only
-vmix_rs = { version = "0.1.0", features = ["tcp"] }
+vmix_rs = { version = "0.2.0", features = ["tcp"] }
 
 # HTTP only
-vmix_rs = { version = "0.1.0", features = ["http"] }
+vmix_rs = { version = "0.2.0", features = ["http"] }
 ```
 
 ### WebAssembly
@@ -36,7 +36,7 @@ vmix_rs = { version = "0.1.0", features = ["http"] }
 ```toml
 [dependencies]
 # With XML parsing support
-vmix-core = { version = "0.1.0", features = ["xml"] }
+vmix-core = { version = "0.2.0", features = ["xml"] }
 ```
 
 ### Embedded Systems (no_std)
@@ -44,10 +44,10 @@ vmix-core = { version = "0.1.0", features = ["xml"] }
 ```toml
 [dependencies]
 # Struct definitions only (lightweight)
-vmix-core = "0.1.0"
+vmix-core = "0.2.0"
 
 # With XML parsing (if needed)
-vmix-core = { version = "0.1.0", features = ["xml"] }
+vmix-core = { version = "0.2.0", features = ["xml"] }
 ```
 
 ## Usage

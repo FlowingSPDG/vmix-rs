@@ -8,7 +8,7 @@ license.workspace = true
 description = "TCP API client for vMix"
 
 [dependencies]
-vmix-core = { path = "../vmix-core", version = "0.1.0", features = ["std", "xml"] }
+vmix-core = { path = "../vmix-core", version = "0.2.0", features = ["std", "xml"] }
 anyhow.workspace = true
 
 [lib]
