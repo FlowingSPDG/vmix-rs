@@ -9,10 +9,11 @@ description = "Core data structures and XML parsing for vMix API (no_std compati
 
 [dependencies]
 serde = { workspace = true, default-features = false, features = ["derive", "alloc"] }
-quick-xml = { workspace = true, default-features = false, features = ["serialize"] }
+quick-xml = { workspace = true, default-features = false, features = ["serialize"], optional = true }
 
 [features]
 default = []
+xml = ["dep:quick-xml"]
 std = ["serde/std"]
 
 [lib]

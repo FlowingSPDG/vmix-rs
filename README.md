@@ -10,16 +10,18 @@ A Rust library for interacting with vMix via TCP and HTTP APIs.
 
 This library is organized into separate crates for different use cases:
 
-- **vmix-core**: Core data structures and XML parsing (`no_std` compatible)
+- **vmix-core**: Core data structures (XML parsing optional via `xml` feature)
 - **vmix-tcp**: TCP API client
 - **vmix-http**: HTTP API client (async)
 - **vmix-rs**: Convenience wrapper (this crate)
 
 ## Installation
 
+### Desktop Applications
+
 ```toml
 [dependencies]
-# For desktop applications with both TCP and HTTP support
+# Both TCP and HTTP support
 vmix_rs = { version = "0.1.0", features = ["full"] }
 
 # TCP only
@@ -27,33 +29,75 @@ vmix_rs = { version = "0.1.0", features = ["tcp"] }
 
 # HTTP only
 vmix_rs = { version = "0.1.0", features = ["http"] }
+```
 
-# For embedded/WebAssembly (no_std)
+### WebAssembly
+
+```toml
+[dependencies]
+# With XML parsing support
+vmix-core = { version = "0.1.0", features = ["xml"] }
+```
+
+### Embedded Systems (no_std)
+
+```toml
+[dependencies]
+# Struct definitions only (lightweight)
 vmix-core = "0.1.0"
+
+# With XML parsing (if needed)
+vmix-core = { version = "0.1.0", features = ["xml"] }
 ```
 
 ## Usage
 
 ### Desktop Applications
 
-Use `vmix-rs` with TCP/HTTP features:
-
 ```rust
 use vmix_rs::{VmixApi, HttpVmixClient};
+use std::time::Duration;
+
+// TCP API
+let client = VmixApi::new("127.0.0.1:8099".parse()?, Duration::from_secs(5))?;
+
+// HTTP API
+let http_client = HttpVmixClient::new("127.0.0.1:8088".parse()?, Duration::from_secs(5));
 ```
 
-### Embedded/WebAssembly (no_std)
+### WebAssembly
 
-Use `vmix-core` directly for XML parsing only. You'll need to handle network communication yourself:
+```rust
+use vmix_core::{Vmix, from_str};
+
+// Fetch XML from vMix via your HTTP client
+// let xml = fetch_xml_from_vmix().await?;
+
+// Parse XML to strongly-typed structures
+let vmix_state: Vmix = from_str(&xml)?;
+println!("Active input: {}", vmix_state.active);
+```
+
+### Embedded Systems (Embassy, etc.)
 
 ```rust
 #![no_std]
 extern crate alloc;
 
-use vmix_core::{Vmix, from_str};
+use vmix_core::Vmix;
 
-// Parse XML data (obtained from your own HTTP/TCP client)
-let vmix_state: Vmix = from_str(xml_string)?;
+// Option 1: Use struct definitions only
+// Manually populate structs from TCP XMLTEXT commands
+// Example: XMLTEXT vmix/active -> "1"
+
+// Option 2: With XML parsing (requires 'xml' feature)
+#[cfg(feature = "xml")]
+use vmix_core::from_str;
+
+#[cfg(feature = "xml")]
+fn parse_vmix_xml(xml: &str) -> Result<Vmix, quick_xml::DeError> {
+    from_str(xml)
+}
 ```
 
 ## Examples

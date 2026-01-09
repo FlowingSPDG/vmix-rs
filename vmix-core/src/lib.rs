@@ -7,9 +7,11 @@ pub mod models;
 // Re-export for convenience
 pub use models::*;
 
-// Re-export quick-xml for XML parsing
+// XML parsing features (optional)
+#[cfg(feature = "xml")]
 pub use quick_xml;
 
+#[cfg(feature = "xml")]
 /// Parse XML string into Vmix structure
 ///
 /// # Examples
@@ -24,6 +26,7 @@ pub fn from_str(s: &str) -> Result<Vmix, quick_xml::DeError> {
     quick_xml::de::from_str(s)
 }
 
+#[cfg(feature = "xml")]
 /// Serialize Vmix structure to XML string
 ///
 /// # Examples
