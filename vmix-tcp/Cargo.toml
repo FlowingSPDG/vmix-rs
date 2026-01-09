@@ -1,0 +1,16 @@
+[package]
+name = "vmix-tcp"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+description = "TCP API client for vMix"
+
+[dependencies]
+vmix-core = { path = "../vmix-core", version = "0.1.0", features = ["std", "xml"] }
+anyhow.workspace = true
+
+[lib]
+name = "vmix_tcp"
+path = "src/lib.rs"

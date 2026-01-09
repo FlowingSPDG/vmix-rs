@@ -1,0 +1,21 @@
+[package]
+name = "vmix-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+description = "Core data structures and XML parsing for vMix API (no_std compatible)"
+
+[dependencies]
+serde = { workspace = true, default-features = false, features = ["derive", "alloc"] }
+quick-xml = { workspace = true, default-features = false, features = ["serialize"], optional = true }
+
+[features]
+default = []
+xml = ["dep:quick-xml"]
+std = ["serde/std"]
+
+[lib]
+name = "vmix_core"
+path = "src/lib.rs"

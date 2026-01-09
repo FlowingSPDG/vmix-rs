@@ -1,0 +1,20 @@
+[package]
+name = "vmix-http"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license.workspace = true
+description = "HTTP API client for vMix"
+
+[dependencies]
+vmix-core = { path = "../vmix-core", version = "0.1.0", features = ["std", "xml"] }
+vmix-tcp = { path = "../vmix-tcp", version = "0.1.0" }
+tokio = { workspace = true, features = ["rt", "net", "macros", "rt-multi-thread"] }
+reqwest = { workspace = true, features = ["json"] }
+async-trait.workspace = true
+anyhow.workspace = true
+
+[lib]
+name = "vmix_http"
+path = "src/lib.rs"

@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(not(feature = "std"))]
+use alloc::{string::String, vec::Vec};
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Vmix {
     #[serde(rename = "version")]
@@ -234,8 +237,6 @@ pub struct Image {
 
     #[serde(rename = "name", default)]
     pub name: Option<String>,
-    // #[serde(rename = "_text")]
-    // text: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -248,8 +249,6 @@ pub struct List {
 pub struct ItemClass {
     #[serde(rename = "_selected")]
     pub selected: String,
-    // #[serde(rename = "_text")]
-    // text: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -384,6 +383,9 @@ pub struct ListItem {
 mod xml_bool {
     use serde::{Deserialize, Deserializer, Serializer};
 
+    #[cfg(not(feature = "std"))]
+    use alloc::{format, string::String};
+
     pub fn serialize<S>(value: &bool, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -411,6 +413,9 @@ mod xml_bool {
 // Custom deserializer for optional XML boolean values
 mod xml_bool_option {
     use serde::{Deserialize, Deserializer, Serializer};
+
+    #[cfg(not(feature = "std"))]
+    use alloc::{format, string::String};
 
     pub fn serialize<S>(value: &Option<bool>, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -443,6 +448,7 @@ mod xml_bool_option {
         }
     }
 }
+
 // Outputs structure
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Outputs {
