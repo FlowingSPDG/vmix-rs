@@ -28,7 +28,7 @@ vmix-rs = { version = "0.2.0", features = ["full"] }
 vmix-rs = { version = "0.2.0", features = ["tcp"] }
 
 # HTTP only
-vmix-rs = { version = "0.2.0", features = ["http"] }
+rs = { version = "0.2.0", features = ["http"] }
 ```
 
 ### WebAssembly
@@ -36,7 +36,7 @@ vmix-rs = { version = "0.2.0", features = ["http"] }
 ```toml
 [dependencies]
 # With XML parsing support
-vmix-core = { version = "0.2.0", features = ["xml"] }
+core = { version = "0.2.0", features = ["xml"] }
 ```
 
 ### Embedded Systems (no_std)
@@ -44,10 +44,10 @@ vmix-core = { version = "0.2.0", features = ["xml"] }
 ```toml
 [dependencies]
 # Struct definitions only (lightweight)
-vmix-core = "0.2.0"
+core = "0.2.0"
 
 # With XML parsing (if needed)
-vmix-core = { version = "0.2.0", features = ["xml"] }
+core = { version = "0.2.0", features = ["xml"] }
 ```
 
 ## Usage
@@ -55,7 +55,7 @@ vmix-core = { version = "0.2.0", features = ["xml"] }
 ### Desktop Applications
 
 ```rust
-use vmix-rs::{VmixApi, HttpVmixClient};
+use vmix_rs::{VmixApi, HttpVmixClient};
 use std::time::Duration;
 
 // TCP API
@@ -68,14 +68,14 @@ let http_client = HttpVmixClient::new("127.0.0.1:8088".parse()?, Duration::from_
 ### WebAssembly
 
 ```rust
-use vmix-core::{Vmix, from_str};
+use vmix_core::{Vmix, from_str};
 
 // Fetch XML from vMix via your HTTP client
 // let xml = fetch_xml_from_vmix().await?;
 
 // Parse XML to strongly-typed structures
-let vmix-state: Vmix = from_str(&xml)?;
-println!("Active input: {}", vmix-state.active);
+let vmix_state: Vmix = from_str(&xml)?;
+println!("Active input: {}", vmix_state.active);
 ```
 
 ### Embedded Systems (Embassy, etc.)
@@ -84,7 +84,7 @@ println!("Active input: {}", vmix-state.active);
 #![no_std]
 extern crate alloc;
 
-use vmix-core::Vmix;
+use vmix_core::Vmix;
 
 // Option 1: Use struct definitions only
 // Manually populate structs from TCP XMLTEXT commands
@@ -92,10 +92,10 @@ use vmix-core::Vmix;
 
 // Option 2: With XML parsing (requires 'xml' feature)
 #[cfg(feature = "xml")]
-use vmix-core::from_str;
+use vmix_core::from_str;
 
 #[cfg(feature = "xml")]
-fn parse_vmix-xml(xml: &str) -> Result<Vmix, quick_xml::DeError> {
+fn parse_vmix_xml(xml: &str) -> Result<Vmix, quick_xml::DeError> {
     from_str(xml)
 }
 ```
