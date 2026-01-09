@@ -33,7 +33,7 @@ path = "src/lib.rs"
 [[example]]
 name = "tcp_http_comparison"
 path = "../examples/tcp_http_comparison.rs"
-required-features = ["http"]
+required-features = ["full"]
 
 [[example]]
 name = "http_example"
