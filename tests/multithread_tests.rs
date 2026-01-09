@@ -6,7 +6,9 @@ use vmix_rs::vmix::VmixApi;
 mod tests {
     use super::*;
     use quick_xml::de;
-    use vmix_rs::models::{Input, State, Vmix};
+    use vmix_rs::models::{Input, State};
+    #[cfg(feature = "http")]
+    use vmix_rs::models::Vmix;
     use vmix_rs::traits::VmixTcpApiClient;
 
     #[test]
@@ -44,6 +46,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[cfg(feature = "http")]
     async fn test_actual_vmix_xml_full_parsing() {
         // Test if we can fetch and parse the actual XML
         let xml_result = reqwest::get("http://192.168.160.54:8088/api").await;
@@ -101,7 +104,7 @@ mod tests {
         let timeout = Duration::from_secs(5);
 
         // Test Arc<tokio::sync::Mutex<VmixApi>>
-        let result = VmixApi::new(addr, timeout).await;
+        let result = VmixApi::new(addr, timeout);
 
         // Since we're not running an actual vMix instance, the connection will fail
         // But this test ensures that the type system accepts our Send + Sync implementation
@@ -134,7 +137,7 @@ mod tests {
         let addr: SocketAddr = "127.0.0.1:8099".parse().unwrap();
         let timeout = Duration::from_secs(5);
 
-        let result = VmixApi::new(addr, timeout).await;
+        let result = VmixApi::new(addr, timeout);
 
         match result {
             Ok(api) => {
@@ -162,7 +165,7 @@ mod tests {
         let addr: SocketAddr = "127.0.0.1:8099".parse().unwrap();
         let timeout = Duration::from_secs(1);
 
-        let result = VmixApi::new(addr, timeout).await;
+        let result = VmixApi::new(addr, timeout);
 
         match result {
             Ok(api) => {
@@ -206,7 +209,7 @@ mod tests {
         let addr: SocketAddr = "127.0.0.1:8099".parse().unwrap();
         let timeout = Duration::from_millis(100); // Short timeout for quick test
 
-        let result = VmixApi::new(addr, timeout).await;
+        let result = VmixApi::new(addr, timeout);
 
         match result {
             Ok(api) => {

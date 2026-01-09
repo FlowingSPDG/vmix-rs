@@ -15,7 +15,7 @@ async fn main() -> Result<()> {
 
     // Create both clients
     println!("Creating clients...");
-    let tcp_client = VmixApi::new(addr, Duration::from_secs(5)).await?;
+    let tcp_client = VmixApi::new(addr, Duration::from_secs(5))?;
     let http_client =
         HttpVmixClient::new_with_host_port("192.168.1.6", 8088, Duration::from_secs(5));
 

@@ -16,7 +16,7 @@ async fn main() -> Result<()> {
     let addr: SocketAddr = "127.0.0.1:8099".parse()?;
 
     println!("Attempting to connect to vMix at {}...", addr);
-    let vmix = match VmixApi::new(addr, Duration::from_secs(2)).await {
+    let vmix = match VmixApi::new(addr, Duration::from_secs(2)) {
         Ok(api) => {
             println!("✅ Successfully connected to vMix!");
             api

@@ -93,7 +93,7 @@ impl Drop for VmixApi {
 }
 
 impl VmixApi {
-    pub async fn new(remote: SocketAddr, timeout: Duration) -> Result<Self> {
+    pub fn new(remote: SocketAddr, timeout: Duration) -> Result<Self> {
         // Connect with proper error handling
         let stream = TcpStream::connect_timeout(&remote, timeout)
             .map_err(|e| anyhow::anyhow!("Failed to connect to {}: {}", remote, e))?;
