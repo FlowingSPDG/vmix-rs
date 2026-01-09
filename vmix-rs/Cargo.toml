@@ -1,5 +1,5 @@
 [package]
-name = "vmix_rs"
+name = "vmix-rs"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
