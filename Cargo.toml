@@ -6,14 +6,37 @@ edition = "2021"
 authors = ["Shugo Kawamura <ruk1ium@gmail.com>"]
 repository = "https://github.com/FlowingSPDG/vmix-rs"
 license = "MIT"
+description = "vMix HTTP/TCP API Library"
+exclude = [
+    ".serena/",
+    ".claude/",
+    "CLAUDE.md",
+]
 
 [dependencies]
 anyhow = "1.0.69"
 serde = { version = "1.0.152", features = ["derive"] }
 quick-xml = { version = "0.34", features = ["serialize"] }
-tokio = { version = "1.25.0", features = ["rt", "net", "sync", "macros", "rt-multi-thread", "io-util", "io-std", "time", "signal"] }
 urlencoding = "2.1.3"
-reqwest = { version = "0.11", features = ["json"] }
-async-trait = "0.1"
+
+# Optional dependencies for HTTP API
+tokio = { version = "1.25.0", features = ["rt", "net", "macros", "rt-multi-thread"], optional = true }
+reqwest = { version = "0.11", features = ["json"], optional = true }
+async-trait = { version = "0.1", optional = true }
+
+[features]
+default = []
+http = ["tokio", "reqwest", "async-trait"]
 
 [dev-dependencies]
+tokio = { version = "1.25.0", features = ["rt", "net", "sync", "macros", "rt-multi-thread", "io-util", "io-std", "time", "signal"] }
+reqwest = { version = "0.11", features = ["json"] }
+
+# Examples that use HTTP API
+[[example]]
+name = "tcp_http_comparison"
+required-features = ["http"]
+
+[[example]]
+name = "http_example"
+required-features = ["http"]

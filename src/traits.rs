@@ -1,15 +1,20 @@
+use crate::commands::RecvCommand;
+#[cfg(feature = "http")]
 use crate::{
-    commands::{InputNumber, RecvCommand, TallyData},
+    commands::{InputNumber, TallyData},
     models::Vmix,
 };
 use anyhow::Result;
+#[cfg(feature = "http")]
 use async_trait::async_trait;
+#[cfg(feature = "http")]
 use std::collections::HashMap;
 
 /// HTTP vMix API client trait
 ///
 /// This trait is designed specifically for HTTP-based communication
 /// with vMix instances, providing a request-response pattern.
+#[cfg(feature = "http")]
 #[async_trait]
 pub trait VmixApiClient {
     /// Execute a vMix function with optional parameters
@@ -97,6 +102,7 @@ pub trait VmixTcpApiClient {
 /// This trait allows for easy creation of different client types
 /// with consistent configuration parameters. TCP and HTTP clients
 /// are now completely separate with their own specialized traits.
+#[cfg(feature = "http")]
 pub trait VmixClientFactory {
     type TcpClient: VmixTcpApiClient + Send + Sync;
     type HttpClient: VmixApiClient + Send + Sync;
