@@ -8,9 +8,9 @@ license.workspace = true
 description = "vMix HTTP/TCP API Library"
 
 [dependencies]
-vmix-core = { path = "../vmix-core", version = "0.1.0", features = ["xml"] }
-vmix-tcp = { path = "../vmix-tcp", version = "0.1.0", optional = true }
-vmix-http = { path = "../vmix-http", version = "0.1.0", optional = true }
+vmix-core = { path = "../vmix-core", version = "0.2.0", features = ["xml"] }
+vmix-tcp = { path = "../vmix-tcp", version = "0.2.0", optional = true }
+vmix-http = { path = "../vmix-http", version = "0.2.0", optional = true }
 
 [features]
 default = ["tcp", "std"]
