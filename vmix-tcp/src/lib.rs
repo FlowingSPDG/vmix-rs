@@ -6,7 +6,7 @@ pub mod vmix;
 // Re-export commonly used types
 pub use acts::ActivatorsData;
 pub use commands::{
-    InputNumber, RecvCommand, SendCommand, SUBSCRIBECommand, TallyData, TallyResponse,
+    InputNumber, RecvCommand, SUBSCRIBECommand, SendCommand, TallyData, TallyResponse,
 };
 pub use traits::VmixTcpApiClient;
 pub use vmix::VmixApi;

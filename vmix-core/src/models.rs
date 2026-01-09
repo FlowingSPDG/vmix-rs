@@ -382,9 +382,9 @@ pub struct ListItem {
 // Custom deserializer for XML boolean values
 mod xml_bool {
     use serde::{Deserialize, Deserializer, Serializer};
-    
+
     #[cfg(not(feature = "std"))]
-    use alloc::{string::String, format};
+    use alloc::{format, string::String};
 
     pub fn serialize<S>(value: &bool, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -413,9 +413,9 @@ mod xml_bool {
 // Custom deserializer for optional XML boolean values
 mod xml_bool_option {
     use serde::{Deserialize, Deserializer, Serializer};
-    
+
     #[cfg(not(feature = "std"))]
-    use alloc::{string::String, format};
+    use alloc::{format, string::String};
 
     pub fn serialize<S>(value: &Option<bool>, serializer: S) -> Result<S::Ok, S::Error>
     where

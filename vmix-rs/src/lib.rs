@@ -27,7 +27,7 @@ pub mod acts {
 #[cfg(feature = "tcp")]
 pub mod traits {
     pub use vmix_tcp::traits::*;
-    
+
     #[cfg(feature = "http")]
     pub use vmix_http::traits::*;
 }
