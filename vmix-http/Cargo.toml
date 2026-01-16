@@ -6,10 +6,11 @@ authors.workspace = true
 repository.workspace = true
 license.workspace = true
 description = "HTTP API client for vMix"
+readme = "README.md"
 
 [dependencies]
-vmix-core = { path = "../vmix-core", version = "0.2.0", features = ["std", "xml"] }
-vmix-tcp = { path = "../vmix-tcp", version = "0.2.0" }
+vmix-core = { path = "../vmix-core", version = "0.2.1", features = ["std", "xml"] }
+vmix-tcp = { path = "../vmix-tcp", version = "0.2.1" }
 tokio = { workspace = true, features = ["rt", "net", "macros", "rt-multi-thread"] }
 reqwest = { workspace = true, features = ["json"] }
 async-trait.workspace = true
