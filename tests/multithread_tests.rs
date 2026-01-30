@@ -49,11 +49,12 @@ mod tests {
     #[cfg(feature = "http")]
     async fn test_actual_vmix_xml_full_parsing() {
         // Test if we can fetch and parse the actual XML
-        use vmix_rs::http::HttpVmixClient;
         use std::time::Duration;
+        use vmix_rs::http::HttpVmixClient;
 
-        let client = HttpVmixClient::new_with_host_port("192.168.160.54", 8088, Duration::from_secs(5));
-        
+        let client =
+            HttpVmixClient::new_with_host_port("192.168.160.54", 8088, Duration::from_secs(5));
+
         match client.get_xml_state().await {
             Ok(vmix_data) => {
                 println!("✅ Successfully parsed actual vMix XML");
@@ -67,7 +68,10 @@ mod tests {
                 }
             }
             Err(e) => {
-                println!("⚠️ Could not connect to vMix instance at 192.168.160.54:8088: {}", e);
+                println!(
+                    "⚠️ Could not connect to vMix instance at 192.168.160.54:8088: {}",
+                    e
+                );
             }
         }
     }

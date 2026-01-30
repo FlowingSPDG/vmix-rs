@@ -34,7 +34,11 @@ impl HttpVmixClient {
         }
     }
 
-    async fn send_request(&self, path: &str, query_params: &HashMap<String, String>) -> Result<Vec<u8>> {
+    async fn send_request(
+        &self,
+        path: &str,
+        query_params: &HashMap<String, String>,
+    ) -> Result<Vec<u8>> {
         // Build query string
         let mut query_parts = Vec::new();
         for (key, value) in query_params {
@@ -76,7 +80,7 @@ impl HttpVmixClient {
                 Ok(0) => break, // EOF
                 Ok(n) => {
                     decoder.feed(&temp_buffer[..n])?;
-                    
+
                     // Try to decode response
                     if let Some(response) = decoder.decode()? {
                         response_opt = Some(response);
@@ -101,7 +105,7 @@ impl HttpVmixClient {
         // The decoder has already consumed the headers, so we need to read the body separately
         // Check if there's a body based on Content-Length or Transfer-Encoding
         let mut body = Vec::new();
-        
+
         // Try to get Content-Length from headers
         let content_length = response
             .headers
@@ -114,7 +118,11 @@ impl HttpVmixClient {
             let mut remaining = len;
             while remaining > 0 {
                 let to_read = remaining.min(temp_buffer.len());
-                let read_timeout = timeout(self.request_timeout, stream.read(&mut temp_buffer[..to_read])).await?;
+                let read_timeout = timeout(
+                    self.request_timeout,
+                    stream.read(&mut temp_buffer[..to_read]),
+                )
+                .await?;
                 match read_timeout {
                     Ok(0) => break, // EOF
                     Ok(n) => {
@@ -127,7 +135,8 @@ impl HttpVmixClient {
         } else {
             // No Content-Length, read until EOF (Connection: close)
             loop {
-                let read_timeout = timeout(self.request_timeout, stream.read(&mut temp_buffer)).await?;
+                let read_timeout =
+                    timeout(self.request_timeout, stream.read(&mut temp_buffer)).await?;
                 match read_timeout {
                     Ok(0) => break, // EOF
                     Ok(n) => {
