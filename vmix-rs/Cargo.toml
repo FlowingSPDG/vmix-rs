@@ -22,7 +22,6 @@ std = ["vmix-core/std"]
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["rt", "net", "sync", "macros", "rt-multi-thread", "io-util", "io-std", "time", "signal"] }
-reqwest = { workspace = true, features = ["json"] }
 anyhow.workspace = true
 quick-xml = { workspace = true, features = ["serialize"] }
 

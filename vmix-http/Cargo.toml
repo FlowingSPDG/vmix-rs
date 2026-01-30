@@ -11,10 +11,11 @@ readme = "README.md"
 [dependencies]
 vmix-core = { path = "../vmix-core", version = "0.2.1", features = ["std", "xml"] }
 vmix-tcp = { path = "../vmix-tcp", version = "0.2.1" }
-tokio = { workspace = true, features = ["rt", "net", "macros", "rt-multi-thread"] }
-reqwest = { workspace = true, features = ["json"] }
+tokio = { workspace = true, features = ["rt", "net", "macros", "rt-multi-thread", "io-util", "time"] }
+shiguredo_http11.workspace = true
 async-trait.workspace = true
 anyhow.workspace = true
+urlencoding.workspace = true
 
 [lib]
 name = "vmix_http"

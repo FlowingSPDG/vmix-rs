@@ -111,7 +111,7 @@ pub enum RecvCommand {
 pub enum SendCommand {
     TALLY,
     FUNCTION(String, Option<String>),
-    ACTS(String, usize),
+    ACTS(String, Option<usize>),
     XML,
     XMLTEXT(String),
     SUBSCRIBE(SUBSCRIBECommand),
@@ -171,7 +171,11 @@ impl From<SendCommand> for Vec<u8> {
                 format!("FUNCTION {} {}\r\n", func, query.unwrap_or("".to_string())).into_bytes()
             }
             SendCommand::ACTS(command, input) => {
-                format!("ACTS {} {}\r\n", command, input).into_bytes()
+                if let Some(input_num) = input {
+                    format!("ACTS {} {}\r\n", command, input_num).into_bytes()
+                } else {
+                    format!("ACTS {}\r\n", command).into_bytes()
+                }
             }
             SendCommand::XML => "XML\r\n".as_bytes().to_vec(),
             SendCommand::XMLTEXT(path) => format!("XMLTEXT {}\r\n", path).into_bytes(),

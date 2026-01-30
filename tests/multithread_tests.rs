@@ -49,37 +49,26 @@ mod tests {
     #[cfg(feature = "http")]
     async fn test_actual_vmix_xml_full_parsing() {
         // Test if we can fetch and parse the actual XML
-        let xml_result = reqwest::get("http://192.168.160.54:8088/api").await;
+        use vmix_rs::http::HttpVmixClient;
+        use std::time::Duration;
 
-        if let Ok(response) = xml_result {
-            if let Ok(xml_text) = response.text().await {
-                println!("Fetched XML from actual vMix instance");
+        let client = HttpVmixClient::new_with_host_port("192.168.160.54", 8088, Duration::from_secs(5));
+        
+        match client.get_xml_state().await {
+            Ok(vmix_data) => {
+                println!("✅ Successfully parsed actual vMix XML");
+                println!("Total inputs: {}", vmix_data.inputs.input.len());
 
-                let vmix_result: Result<Vmix, _> = de::from_str(&xml_text);
-                match vmix_result {
-                    Ok(vmix_data) => {
-                        println!("✅ Successfully parsed actual vMix XML");
-                        println!("Total inputs: {}", vmix_data.inputs.input.len());
-
-                        for input in &vmix_data.inputs.input {
-                            println!(
-                                "Input {}: {} - state: {:?}",
-                                input.number, input.title, input.state
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        println!("❌ Failed to parse actual vMix XML: {}", e);
-                        println!(
-                            "XML content (first 500 chars): {}",
-                            &xml_text[..500.min(xml_text.len())]
-                        );
-                        panic!("Actual XML parsing failed");
-                    }
+                for input in &vmix_data.inputs.input {
+                    println!(
+                        "Input {}: {} - state: {:?}",
+                        input.number, input.title, input.state
+                    );
                 }
             }
-        } else {
-            println!("⚠️ Could not connect to vMix instance at 192.168.160.54:8088");
+            Err(e) => {
+                println!("⚠️ Could not connect to vMix instance at 192.168.160.54:8088: {}", e);
+            }
         }
     }
 
