@@ -81,6 +81,8 @@ pub enum ActivatorsData {
     Overlay3(InputNumber, bool),
     Overlay4(InputNumber, bool),
     ReplayPlaying(bool),
+    /// Unknown activator type with raw data
+    Unknown(Vec<String>),
 }
 
 // ActivatorsDataはマルチスレッド環境で安全に使用できる
@@ -106,9 +108,8 @@ fn create_input_bool_variant(
     idx: usize,
 ) -> Result<ActivatorsData, anyhow::Error> {
     if values.len() <= idx + 1 {
-        return Err(anyhow::anyhow!(
-            "Not enough values for input boolean variant"
-        ));
+        // Not enough values, store as Unknown
+        return Ok(ActivatorsData::Unknown(values.to_vec()));
     }
 
     let input_num = parse_input_number(&values[idx]);
@@ -166,7 +167,7 @@ fn create_input_bool_variant(
         "Overlay2" => Ok(ActivatorsData::Overlay2(input_num, is_active_val)),
         "Overlay3" => Ok(ActivatorsData::Overlay3(input_num, is_active_val)),
         "Overlay4" => Ok(ActivatorsData::Overlay4(input_num, is_active_val)),
-        _ => Err(anyhow::anyhow!("Unknown input boolean variant")),
+        _ => Ok(ActivatorsData::Unknown(values.to_vec())),
     }
 }
 
@@ -175,7 +176,8 @@ fn create_input_float_variant(
     idx: usize,
 ) -> Result<ActivatorsData, anyhow::Error> {
     if values.len() <= idx + 1 {
-        return Err(anyhow::anyhow!("Not enough values for input float variant"));
+        // Not enough values, store as Unknown
+        return Ok(ActivatorsData::Unknown(values.to_vec()));
     }
 
     let input_num = parse_input_number(&values[idx]);
@@ -188,7 +190,7 @@ fn create_input_float_variant(
     match values[0].as_str() {
         "InputVolume" => Ok(ActivatorsData::InputVolume(input_num, volume)),
         "InputHeadphones" => Ok(ActivatorsData::InputHeadphones(input_num, volume)),
-        _ => Err(anyhow::anyhow!("Unknown input float variant")),
+        _ => Ok(ActivatorsData::Unknown(values.to_vec())),
     }
 }
 
@@ -197,9 +199,8 @@ fn create_single_float_variant(
     idx: usize,
 ) -> Result<ActivatorsData, anyhow::Error> {
     if values.len() <= idx {
-        return Err(anyhow::anyhow!(
-            "Not enough values for single float variant"
-        ));
+        // Not enough values, store as Unknown
+        return Ok(ActivatorsData::Unknown(values.to_vec()));
     }
 
     let volume = parse_float(&values[idx]);
@@ -214,7 +215,7 @@ fn create_single_float_variant(
         "BusEVolume" => Ok(ActivatorsData::BusEVolume(volume)),
         "BusFVolume" => Ok(ActivatorsData::BusFVolume(volume)),
         "BusGVolume" => Ok(ActivatorsData::BusGVolume(volume)),
-        _ => Err(anyhow::anyhow!("Unknown single float variant")),
+        _ => Ok(ActivatorsData::Unknown(values.to_vec())),
     }
 }
 
@@ -223,9 +224,8 @@ fn create_single_bool_variant(
     idx: usize,
 ) -> Result<ActivatorsData, anyhow::Error> {
     if values.len() <= idx {
-        return Err(anyhow::anyhow!(
-            "Not enough values for single boolean variant"
-        ));
+        // Not enough values, store as Unknown
+        return Ok(ActivatorsData::Unknown(values.to_vec()));
     }
 
     let is_active_val = is_active(&values[idx]);
@@ -252,7 +252,7 @@ fn create_single_bool_variant(
         "External" => Ok(ActivatorsData::External(is_active_val)),
         "Fullscreen" => Ok(ActivatorsData::Fullscreen(is_active_val)),
         "ReplayPlaying" => Ok(ActivatorsData::ReplayPlaying(is_active_val)),
-        _ => Err(anyhow::anyhow!("Unknown single boolean variant")),
+        _ => Ok(ActivatorsData::Unknown(values.to_vec())),
     }
 }
 
@@ -260,7 +260,8 @@ impl TryFrom<&[String]> for ActivatorsData {
     type Error = anyhow::Error;
     fn try_from(value: &[String]) -> Result<Self, Self::Error> {
         if value.is_empty() {
-            return Err(anyhow::anyhow!("Empty value array"));
+            // Empty value array, store as Unknown
+            return Ok(ActivatorsData::Unknown(value.to_vec()));
         }
 
         let activator_type = value[0].as_str();
@@ -298,8 +299,8 @@ impl TryFrom<&[String]> for ActivatorsData {
             | "External" | "Fullscreen" | "ReplayPlaying" => create_single_bool_variant(value, 1),
 
             _ => {
-                println!("Unknown Activator: {:?}", value);
-                Err(anyhow::anyhow!("Unknown Activator"))
+                // Store unknown activators with raw data instead of failing
+                Ok(ActivatorsData::Unknown(value.to_vec()))
             }
         }
     }
