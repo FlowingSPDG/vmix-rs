@@ -199,10 +199,7 @@ impl HttpVmixClient {
     }
 
     pub async fn is_connected(&self) -> bool {
-        match self.send_request("/api", &HashMap::new()).await {
-            Ok(_) => true,
-            Err(_) => false,
-        }
+        self.send_request("/api", &HashMap::new()).await.is_ok()
     }
 
     pub async fn get_active_input(&self) -> Result<InputNumber> {
