@@ -209,7 +209,7 @@ mod tests {
                 // If connection succeeds, test normal shutdown
                 assert!(api.is_connected());
                 drop(api); // This should trigger clean shutdown
-                           // If we reach here, shutdown didn't hang
+                // If we reach here, shutdown didn't hang
             }
             Err(_) => {
                 // Expected - no vMix instance running

@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::{
-    io::{stdin, Write},
+    io::{Write, stdin},
     net::SocketAddr,
     time::Duration,
 };

@@ -7,9 +7,9 @@ use std::{
     io::Write,
     net::{SocketAddr, TcpStream},
     sync::{
+        Arc,
         atomic::{AtomicBool, Ordering},
         mpsc::{Receiver, SyncSender},
-        Arc,
     },
     thread::JoinHandle,
     time::Duration,
@@ -38,10 +38,10 @@ impl Drop for VmixApi {
 
         // Explicitly close the original stream to force both reader and writer to exit
         // This will cause any blocking reads/writes to return with an error
-        if let Ok(mut stream_guard) = self.original_stream.lock() {
-            if let Some(stream) = stream_guard.take() {
-                let _ = stream.shutdown(std::net::Shutdown::Both);
-            }
+        if let Ok(mut stream_guard) = self.original_stream.lock()
+            && let Some(stream) = stream_guard.take()
+        {
+            let _ = stream.shutdown(std::net::Shutdown::Both);
         }
 
         // Send a final message to wake up the writer thread if it's waiting
