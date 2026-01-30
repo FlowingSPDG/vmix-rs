@@ -8,8 +8,8 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.2.1"
-edition = "2021"
+version = "0.2.2"
+edition = "2024"
 authors = ["Shugo Kawamura <ruk1ium@gmail.com>"]
 repository = "https://github.com/FlowingSPDG/vmix-rs"
 license = "MIT"
@@ -25,7 +25,7 @@ anyhow = "1.0.69"
 
 # HTTP dependencies
 tokio = { version = "1.25.0", default-features = false }
-reqwest = { version = "0.11", default-features = false }
+shiguredo_http11 = { git = "https://github.com/shiguredo/http11-rs", branch = "develop" }
 async-trait = "0.1"
 
 # Other
